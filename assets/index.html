@@ -1,0 +1,2618 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PhytoNote 🌿</title>
+    <style>
+        /* ================================================================
+           ГЛОБАЛЬНЫЕ СТИЛИ
+           ================================================================ */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f4f7f4;
+            color: #1e2e1e;
+            padding-bottom: 80px;
+            min-height: 100vh;
+        }
+
+        /* ================================================================
+           ШАПКА
+           ================================================================ */
+        .app-header {
+            background: white;
+            padding: 18px 20px 12px 20px;
+            border-bottom: 1px solid #e8eee8;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+        }
+        .app-header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1e3a1e;
+        }
+        .app-header .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .app-header .header-actions button {
+            background: none;
+            border: none;
+            font-size: 22px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+        .app-header .header-actions button:hover {
+            background: #eef3ee;
+        }
+
+        /* ================================================================
+           СТРАНИЦЫ
+           ================================================================ */
+        .page {
+            display: none;
+            padding: 16px 16px 80px 16px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .page.active {
+            display: block;
+        }
+
+        /* ================================================================
+           КАРТОЧКИ
+           ================================================================ */
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            border: 1px solid #eef3ee;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .card:active {
+            transform: scale(0.98);
+            background: #f8fbf8;
+        }
+        .card .avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: #e4ece4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+        .card .avatar .letter {
+            font-size: 22px;
+            font-weight: 600;
+            color: #2d5a2d;
+        }
+        .card .info {
+            flex: 1;
+            min-width: 0;
+        }
+        .card .info .title {
+            font-weight: 600;
+            font-size: 16px;
+            color: #1a2e1a;
+        }
+        .card .info .sub {
+            font-size: 13px;
+            color: #5c725c;
+        }
+        .card .info .meta {
+            display: flex;
+            gap: 12px;
+            font-size: 12px;
+            color: #4a604a;
+            margin-top: 3px;
+            flex-wrap: wrap;
+        }
+        .card .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .card .badge-owner {
+            font-size: 11px;
+            background: #eef3ee;
+            padding: 2px 10px;
+            border-radius: 12px;
+            color: #5c725c;
+        }
+        .status-dot.green { background: #3a9e3a; }
+        .status-dot.yellow { background: #e8b830; }
+        .status-dot.red { background: #d9534f; }
+
+        /* ================================================================
+           КАРТОЧКИ ДЛЯ РАЗДЕЛА УХОД
+           ================================================================ */
+        .card-care {
+            background: white;
+            border-radius: 16px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            border: 1px solid #eef3ee;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            cursor: default;
+        }
+        .card-care .avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: #e4ece4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+        .card-care .info {
+            flex: 1;
+            min-width: 0;
+        }
+        .card-care .info .title {
+            font-weight: 700;
+            font-size: 16px;
+            color: #1a2e1a;
+        }
+        .card-care .info .sub {
+            font-size: 13px;
+            color: #5c725c;
+        }
+        .card-care .info .meta {
+            display: flex;
+            gap: 12px;
+            font-size: 12px;
+            color: #4a604a;
+            margin-top: 3px;
+            flex-wrap: wrap;
+        }
+        .card-care .action-btn {
+            flex-shrink: 0;
+            min-width: 100px;
+            padding: 10px 18px;
+            font-size: 15px;
+            margin-top: 0;
+        }
+
+        /* ================================================================
+           ФИЛЬТРЫ И ПОИСК
+           ================================================================ */
+        .filter-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .filter-group select {
+            flex: 1;
+            min-width: 120px;
+            padding: 8px 14px;
+            border-radius: 30px;
+            border: 1px solid #dce4dc;
+            background: white;
+            font-size: 13px;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%233a543a' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            cursor: pointer;
+        }
+        .filter-group select:focus {
+            border-color: #3a7a3a;
+        }
+        .search-bar {
+            width: 100%;
+            padding: 10px 16px;
+            border-radius: 30px;
+            border: 1px solid #dce4dc;
+            background: white;
+            font-size: 15px;
+            margin-bottom: 14px;
+            outline: none;
+        }
+        .search-bar:focus {
+            border-color: #3a7a3a;
+        }
+
+        /* ================================================================
+           КНОПКИ
+           ================================================================ */
+        .btn {
+            display: inline-block;
+            background: #1e3a1e;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: 0.2s;
+            text-align: center;
+            width: 100%;
+            margin-top: 6px;
+        }
+        .btn:active { transform: scale(0.97); }
+        .btn-outline { background: white; color: #1e3a1e; border: 1px solid #dce4dc; }
+        .btn-danger { background: #d9534f; }
+        .btn-sm { padding: 6px 14px; font-size: 13px; width: auto; margin-top: 0; }
+        .btn-success { background: #3a7a3a; }
+
+        /* ================================================================
+           НИЖНЕЕ МЕНЮ
+           ================================================================ */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 6px 0 10px 0;
+            border-top: 1px solid #e8eee8;
+            z-index: 30;
+        }
+        .bottom-nav .tab {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 10px;
+            color: #7a8f7a;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px 12px;
+            min-width: 48px;
+        }
+        .bottom-nav .tab .icon { font-size: 24px; line-height: 1.2; }
+        .bottom-nav .tab.active { color: #1e3a1e; font-weight: 600; }
+
+        /* ================================================================
+           КАЛЕНДАРЬ
+           ================================================================ */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            margin-top: 10px;
+        }
+        .calendar-grid .day {
+            background: white;
+            border-radius: 10px;
+            padding: 6px 0;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 500;
+            border: 1px solid #eef3ee;
+            min-height: 44px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .calendar-grid .day:active { transform: scale(0.95); }
+        .calendar-grid .day .dots { display: flex; gap: 3px; margin-top: 2px; }
+        .calendar-grid .day .dots .dot { width: 8px; height: 8px; border-radius: 50%; }
+        .dot.orange { background: #e8b830; }
+        .dot.green { background: #3a9e3a; }
+        .calendar-grid .day.other-month { opacity: 0.3; }
+        .calendar-grid .weekday { font-size: 11px; color: #7a8f7a; text-align: center; padding: 4px 0; }
+        .calendar-grid .day.active {
+            background: #e4ece4;
+        }
+        .calendar-grid .day.selected {
+            background: #d4e0d4;
+        }
+
+        /* События под календарём */
+        .event-plank {
+            background: white;
+            border-radius: 12px;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            border-left: 4px solid #3a9e3a;
+            border: 1px solid #eef3ee;
+            border-left-width: 4px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .event-plank:active { transform: scale(0.98); }
+        .event-plank .name { font-weight: 600; font-size: 15px; }
+        .event-plank .sub { font-size: 12px; color: #5c725c; }
+        .event-plank .badge {
+            font-size: 11px;
+            background: #eef5ee;
+            padding: 2px 12px;
+            border-radius: 20px;
+            color: #2d5a2d;
+        }
+
+        /* ================================================================
+           МОДАЛЬНЫЕ ОКНА
+           ================================================================ */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 100;
+            align-items: flex-end;
+            justify-content: center;
+        }
+        .modal-overlay.show {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 24px 24px 0 0;
+            padding: 20px 20px 30px 20px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.25s ease;
+        }
+        @keyframes slideUp {
+            from {
+                transform: translateY(40px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        .modal-content h2 {
+            font-size: 20px;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .modal-content label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #2d4a2d;
+            display: block;
+            margin-top: 10px;
+        }
+        .modal-content input,
+        .modal-content select,
+        .modal-content textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: 1px solid #dce4dc;
+            font-size: 14px;
+            margin-top: 3px;
+            background: white;
+            font-family: inherit;
+        }
+        .modal-content textarea {
+            resize: vertical;
+            min-height: 40px;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 18px;
+        }
+        .modal-actions button {
+            flex: 1;
+            padding: 12px;
+            border-radius: 30px;
+            border: none;
+            font-size: 15px;
+            cursor: pointer;
+        }
+        .modal-actions .btn-cancel {
+            background: #eef3ee;
+            color: #1e2e1e;
+        }
+        .modal-actions .btn-save {
+            background: #1e3a1e;
+            color: white;
+        }
+
+        /* ================================================================
+           ПРОФИЛЬ
+           ================================================================ */
+        .profile-item {
+            background: white;
+            padding: 12px 16px;
+            border-radius: 14px;
+            margin-bottom: 8px;
+            border: 1px solid #eef3ee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .profile-item .label {
+            font-size: 14px;
+            color: #1e2e1e;
+        }
+        .profile-item .value {
+            font-size: 14px;
+            color: #4a604a;
+        }
+        .profile-item input[type="text"],
+        .profile-item input[type="email"] {
+            border: none;
+            background: #f4f7f4;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            width: 200px;
+            text-align: right;
+        }
+
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #e4ece4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            font-weight: 700;
+            color: #2d5a2d;
+            margin: 0 auto 12px auto;
+            overflow: hidden;
+            cursor: pointer;
+            border: 2px solid #dce4dc;
+            transition: 0.2s;
+        }
+        .profile-avatar:hover {
+            border-color: #1e3a1e;
+        }
+        .profile-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .profile-avatar input {
+            display: none;
+        }
+
+        /* Отладка в профиле */
+        .debug-info {
+            background: #f8fbf8;
+            border-radius: 14px;
+            padding: 12px 16px;
+            margin-top: 16px;
+            border: 1px solid #eef3ee;
+            font-size: 13px;
+            color: #5c725c;
+            text-align: center;
+        }
+        .debug-info .time {
+            font-weight: 600;
+            color: #1e2e1e;
+            font-size: 16px;
+        }
+        .debug-info .log-btn {
+            margin-top: 8px;
+        }
+
+        /* ================================================================
+           ДЕТАЛЬНЫЙ ПРОСМОТР
+           ================================================================ */
+        .detail-field {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f5f0;
+            font-size: 14px;
+            align-items: center;
+        }
+        .detail-field .label {
+            color: #5c725c;
+        }
+        .detail-field .value {
+            font-weight: 500;
+            color: #1e2e1e;
+        }
+        .detail-field input,
+        .detail-field select {
+            border: 1px solid #dce4dc;
+            border-radius: 8px;
+            padding: 4px 10px;
+            font-size: 14px;
+            width: 60%;
+            background: white;
+        }
+        .detail-field textarea {
+            border: 1px solid #dce4dc;
+            border-radius: 8px;
+            padding: 4px 10px;
+            font-size: 14px;
+            width: 60%;
+            resize: vertical;
+            min-height: 40px;
+            font-family: inherit;
+        }
+        .edit-toggle {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 8px;
+        }
+        .edit-toggle:hover {
+            background: #eef3ee;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            padding: 4px 0;
+            border-bottom: 1px dashed #eef3ee;
+        }
+        .readonly-badge {
+            background: #f0ead8;
+            color: #7a6a3a;
+            padding: 2px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+        .care-guide {
+            background: #f8fbf8;
+            border-radius: 12px;
+            padding: 14px;
+            margin-top: 10px;
+            border-left: 4px solid #3a7a3a;
+            white-space: pre-wrap;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .base-management {
+            margin-top: 16px;
+            border-top: 1px solid #eef3ee;
+            padding-top: 12px;
+        }
+        .base-management .title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        .icon-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 4px;
+        }
+        .icon-list button {
+            font-size: 28px;
+            background: white;
+            border: 1px solid #dce4dc;
+            border-radius: 12px;
+            padding: 4px 10px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .icon-list button:active {
+            transform: scale(0.9);
+        }
+        .icon-list button.selected {
+            border-color: #1e3a1e;
+            background: #e4ece4;
+        }
+        .coming-soon {
+            text-align: center;
+            padding: 30px 20px;
+            color: #7a8f7a;
+        }
+        .coming-soon .icon-big {
+            font-size: 40px;
+            display: block;
+            margin-bottom: 10px;
+        }
+        .hidden {
+            display: none;
+        }
+        .flex {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .flex .btn {
+            flex: 1;
+            min-width: 100px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #7a8f7a;
+        }
+        .empty-state .icon-big {
+            font-size: 48px;
+            display: block;
+            margin-bottom: 12px;
+        }
+        .empty-state .btn {
+            max-width: 280px;
+            margin: 12px auto 0;
+        }
+
+        /* ================================================================
+           АДАПТИВ
+           ================================================================ */
+        @media (max-width: 480px) {
+            .app-header h1 {
+                font-size: 20px;
+            }
+            .bottom-nav .tab {
+                font-size: 9px;
+                padding: 2px 6px;
+            }
+            .bottom-nav .tab .icon {
+                font-size: 20px;
+            }
+            .profile-item input[type="text"],
+            .profile-item input[type="email"] {
+                width: 140px;
+            }
+            .detail-field input,
+            .detail-field select,
+            .detail-field textarea {
+                width: 50%;
+            }
+            .btn-sm {
+                font-size: 11px;
+                padding: 4px 10px;
+            }
+            .filter-group select {
+                min-width: 80px;
+                font-size: 12px;
+                padding: 6px 10px;
+            }
+            .card-care .action-btn {
+                min-width: 70px;
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ================================================================
+    ШАПКА
+    ================================================================ -->
+    <header class="app-header">
+        <h1 id="pageTitle">Растения</h1>
+        <div class="header-actions">
+            <button id="headerEditBtn" style="display:none;" onclick="toggleEditMode()">✏️</button>
+        </div>
+    </header>
+
+    <!-- ================================================================
+    СТРАНИЦЫ
+    ================================================================ -->
+
+    <!-- 1. РАСТЕНИЯ (Каталог) -->
+    <div class="page active" id="page-plants">
+        <div class="filter-group">
+            <select id="filterGrowth" onchange="renderCatalog()">
+                <option value="all">Все формы роста</option>
+                <option value="Деревья и кустарники">🌳 Деревья и кустарники</option>
+                <option value="Лианы и ампельные">🌿 Лианы и ампельные</option>
+                <option value="Розеточные">🌱 Розеточные</option>
+                <option value="Прямостоячие травянистые">🌾 Прямостоячие</option>
+                <option value="Суккуленты">🌵 Суккуленты</option>
+            </select>
+            <select id="filterLight" onchange="renderCatalog()">
+                <option value="all">Любой свет</option>
+                <option value="Яркий свет">☀️ Яркий свет</option>
+                <option value="Рассеянный свет">🌤 Рассеянный</option>
+                <option value="Полутень">🌥 Полутень</option>
+                <option value="Тень">🌑 Тень</option>
+            </select>
+            <select id="filterSafety" onchange="renderCatalog()">
+                <option value="all">Все растения</option>
+                <option value="safe_pets">🐾 Безопасно для животных</option>
+                <option value="safe_children">👶 Безопасно для детей</option>
+                <option value="safe_all">🐾👶 Безопасно для всех</option>
+            </select>
+        </div>
+        <input class="search-bar" id="plantsSearch" placeholder="🔍 Поиск в каталоге..." oninput="renderCatalog()">
+        <div id="catalogList"></div>
+    </div>
+
+    <!-- 2. МОИ РАСТЕНИЯ (Базы) -->
+    <div class="page" id="page-garden">
+        <div id="gardenView">
+            <div id="basesList">
+                <button class="btn" onclick="showCreateBaseModal()">➕ Создать базу</button>
+                <div id="basesContainer" style="margin-top:10px;"></div>
+                <div style="margin-top:16px; display:flex; gap:8px; flex-wrap:wrap;">
+                    <button class="btn btn-outline" style="flex:1;" onclick="showExportBaseModal()">📤 Экспорт базы</button>
+                    <button class="btn btn-outline" style="flex:1;" onclick="document.getElementById('importBaseInput').click()">📥 Импорт базы</button>
+                    <input type="file" id="importBaseInput" accept=".json" style="display:none" onchange="importBase(event)">
+                </div>
+            </div>
+            <div id="basePlantsView" style="display:none;">
+                <button class="btn btn-outline" onclick="backToBases()" style="margin-bottom:10px;">← Назад к базам</button>
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                    <span id="currentBaseIcon" style="font-size:28px;">🏠</span>
+                    <h3 id="currentBaseTitle" style="flex:1;">Моя квартира</h3>
+                    <span id="currentBaseOwner" style="font-size:13px;color:#5c725c;"></span>
+                    <button class="btn btn-sm btn-outline" id="editBaseNameBtn" onclick="editBaseName()">✏️</button>
+                </div>
+                <input class="search-bar" id="gardenSearch" placeholder="🔍 Поиск в базе..." oninput="renderBasePlants()">
+                <div id="basePlantsList"></div>
+                <button class="btn" id="addPlantBtn" onclick="showAddPlantModal()" style="margin-top:10px;">➕ Добавить растение</button>
+                <div class="base-management" id="baseManagement" style="margin-top:16px;border-top:1px solid #eef3ee;padding-top:12px;">
+                    <div class="title">Управление базой</div>
+                    <button class="btn btn-danger" id="deleteBaseBtn" onclick="deleteCurrentBase()">🗑 Удалить базу</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. КАЛЕНДАРЬ -->
+    <div class="page" id="page-calendar">
+        <div id="calendarHeader" style="font-weight:600;font-size:18px;margin-bottom:6px;">Июль 2026</div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+        <div style="margin-top:12px;font-size:13px;color:#5c725c;">
+            <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#e8b830;vertical-align:middle;margin-right:6px;"></span> Запланировано
+            <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#3a9e3a;vertical-align:middle;margin-left:16px;margin-right:6px;"></span> Выполнено
+        </div>
+        <div id="calendarEvents" style="margin-top:14px;"></div>
+    </div>
+
+    <!-- 4. УХОД -->
+    <div class="page" id="page-care">
+        <div class="filter-tabs" id="careRange">
+            <button class="active" data-range="today">Сегодня</button>
+            <button data-range="tomorrow">Завтра</button>
+            <button data-range="week">Неделя</button>
+        </div>
+        <div id="careList"></div>
+    </div>
+
+    <!-- 5. ПРОФИЛЬ -->
+    <div class="page" id="page-profile">
+        <div class="profile-avatar" id="profileAvatar" onclick="document.getElementById('avatarInput').click()">
+            <span id="avatarLetter">В</span>
+            <img id="avatarImage" style="display:none;" alt="Аватар">
+            <input type="file" id="avatarInput" accept="image/*" onchange="handleAvatarUpload(event)">
+        </div>
+        <div style="text-align:center;font-size:13px;color:#5c725c;margin-bottom:12px;">Нажмите на аватар, чтобы изменить</div>
+
+        <div class="profile-item">
+            <span class="label">👤 Имя</span>
+            <input type="text" id="profileNameInput" value="Вы" onchange="saveProfile()">
+        </div>
+        <div class="profile-item">
+            <span class="label">📧 Почта</span>
+            <input type="email" id="profileEmailInput" value="" placeholder="email@example.com" onchange="saveProfile()">
+        </div>
+        <div class="profile-item">
+            <span class="label">📁 Всего баз</span>
+            <span class="value" id="totalBases">0</span>
+        </div>
+        <div class="profile-item">
+            <span class="label">🌱 Всего растений</span>
+            <span class="value" id="totalPlants">0</span>
+        </div>
+        <div style="margin-top:16px;">
+            <div style="font-weight:600;margin-bottom:6px;">📚 Управление каталогом</div>
+            <div class="profile-item">
+                <span class="label">📊 Статус</span>
+                <span class="value" id="catalogStatus">Не загружен</span>
+            </div>
+            <button class="btn btn-outline" onclick="document.getElementById('importCatalogInput').click()">📥 Импортировать каталог</button>
+            <input type="file" id="importCatalogInput" accept=".json" style="display:none" onchange="importCatalog(event)">
+            <button class="btn btn-outline" onclick="exportCatalog()">📤 Экспортировать каталог</button>
+            <button class="btn btn-danger" onclick="clearCatalog()">🗑 Очистить каталог</button>
+        </div>
+        <div style="margin-top:16px;">
+            <div style="font-weight:600;margin-bottom:6px;">🔔 Уведомления</div>
+            <div class="profile-item">
+                <span class="label">📱 Push-уведомления</span>
+                <input type="checkbox" id="notifPush" onchange="saveProfile()">
+            </div>
+            <div class="profile-item">
+                <span class="label">📧 На почту</span>
+                <input type="checkbox" id="notifEmail" onchange="saveProfile()">
+            </div>
+        </div>
+        <div style="margin-top:16px;">
+            <button class="btn btn-outline" onclick="exportAllData()">📤 Экспорт всех данных</button>
+            <button class="btn btn-outline" onclick="document.getElementById('importAllInput').click()">📥 Импорт всех данных</button>
+            <input type="file" id="importAllInput" accept=".json" style="display:none" onchange="importAllData(event)">
+            <button class="btn btn-danger" onclick="if(confirm('Удалить ВСЕ данные?')){localStorage.clear();location.reload();}">🗑 Сбросить все данные</button>
+        </div>
+        <div class="coming-soon" style="margin-top:20px;border-top:1px solid #eef3ee;padding-top:16px;">
+            <span class="icon-big">🚀</span>
+            <p style="font-weight:500;">Многопользовательский режим</p>
+            <p style="font-size:13px;color:#8aa08a;">Скоро: общие базы, синхронизация, приглашения</p>
+            <button class="btn btn-outline" style="margin-top:8px;max-width:200px;margin-left:auto;margin-right:auto;" onclick="alert('🚀 В разработке!')">🔒 Управление базами</button>
+        </div>
+
+        <!-- Отладочная информация -->
+        <div class="debug-info">
+            <div>🕒 Текущее время:</div>
+            <div class="time" id="debugTime">--:--:--</div>
+            <div style="margin-top:4px;font-size:12px;color:#8aa08a;" id="debugDate">--</div>
+            <button class="btn btn-sm btn-outline log-btn" onclick="exportLogs()">📋 Скачать логи</button>
+        </div>
+    </div>
+
+    <!-- ================================================================
+    НИЖНЕЕ МЕНЮ
+    ================================================================ -->
+    <nav class="bottom-nav">
+        <button class="tab active" data-page="plants"><span class="icon">🌿</span>Растения</button>
+        <button class="tab" data-page="garden"><span class="icon">🌱</span>Мои</button>
+        <button class="tab" data-page="calendar"><span class="icon">📅</span>Календарь</button>
+        <button class="tab" data-page="care"><span class="icon">💚</span>Уход</button>
+        <button class="tab" data-page="profile"><span class="icon">👤</span>Профиль</button>
+    </nav>
+
+    <!-- ================================================================
+    МОДАЛЬНЫЕ ОКНА
+    ================================================================ -->
+
+    <!-- Создание базы -->
+    <div class="modal-overlay" id="createBaseModal">
+        <div class="modal-content">
+            <h2>➕ Новая база</h2>
+            <label>Название *</label>
+            <input id="baseNameInput" placeholder="Например: Моя квартира">
+            <label>Иконка</label>
+            <div class="icon-list" id="iconSelector">
+                <button data-icon="🏠">🏠</button>
+                <button data-icon="🏢">🏢</button>
+                <button data-icon="🌳">🌳</button>
+                <button data-icon="🏡">🏡</button>
+                <button data-icon="🌿">🌿</button>
+                <button data-icon="🌸">🌸</button>
+                <button data-icon="🌺">🌺</button>
+                <button data-icon="🌴">🌴</button>
+                <button data-icon="🍀">🍀</button>
+                <button data-icon="🌵">🌵</button>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeCreateBaseModal()">Отмена</button>
+                <button class="btn-save" onclick="createBase()">Создать</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Добавление/редактирование растения -->
+    <div class="modal-overlay" id="plantModal">
+        <div class="modal-content">
+            <h2 id="plantModalTitle">➕ Новое растение</h2>
+            <input type="hidden" id="editFlowerId">
+            <label>Название *</label>
+            <input id="fName" placeholder="Название">
+            <label>Расположение</label>
+            <input id="fPlacement" placeholder="Кабинет, кухня...">
+            <label>Возраст (месяцев)</label>
+            <input id="fAge" type="number" value="0" min="0">
+            <label>Полив (лето) дни</label>
+            <input id="fWaterSummer" type="number" value="3" min="1">
+            <label>Полив (зима) дни</label>
+            <input id="fWaterWinter" type="number" value="7" min="1">
+            <label>Подкормка (дни, 0 = нет)</label>
+            <input id="fFert" type="number" value="30" min="0">
+            <label>Пересадка (годы)</label>
+            <input id="fRepot" type="number" value="2" min="1">
+            <label>Освещённость</label>
+            <select id="fLight">
+                <option value="Яркий свет">☀️ Яркий свет</option>
+                <option value="Рассеянный свет" selected>🌤 Рассеянный</option>
+                <option value="Полутень">🌥 Полутень</option>
+                <option value="Тень">🌑 Тень</option>
+            </select>
+            <label>Состояние</label>
+            <select id="fCondition">
+                <option value="Отличное">💚 Отличное</option>
+                <option value="Хорошее" selected>💛 Хорошее</option>
+                <option value="Удовлетворительное">🧡 Удовл.</option>
+                <option value="Плохое">❤️ Плохое</option>
+            </select>
+            <label>Примечания</label>
+            <textarea id="fNotes" placeholder="Любит опрыскивание..."></textarea>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closePlantModal()">Отмена</button>
+                <button class="btn-save" onclick="saveFlower()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Детальный просмотр -->
+    <div class="modal-overlay" id="detailModal">
+        <div class="modal-content">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                <h2 id="detailTitle" style="flex:1; margin:0;">🌿 Растение</h2>
+                <button class="edit-toggle" id="detailEditBtn" onclick="toggleDetailEdit()">✏️</button>
+                <button class="edit-toggle" onclick="closeDetailModal()">✕</button>
+            </div>
+            <div id="detailBody"></div>
+            <button class="btn btn-outline" style="margin-top:8px;" onclick="closeDetailModal()">Закрыть</button>
+        </div>
+    </div>
+
+    <!-- Модалка для подробного ухода (в каталоге) -->
+    <div class="modal-overlay" id="careModal">
+        <div class="modal-content">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <h2 style="margin:0;">📖 Подробный уход</h2>
+                <button class="edit-toggle" onclick="document.getElementById('careModal').classList.remove('show')">✕</button>
+            </div>
+            <div id="careContent" class="care-guide"></div>
+            <button class="btn btn-outline" onclick="document.getElementById('careModal').classList.remove('show')">Закрыть</button>
+        </div>
+    </div>
+
+    <!-- Клонирование -->
+    <div class="modal-overlay" id="cloneModal">
+        <div class="modal-content">
+            <h2>📋 Клонировать в базу</h2>
+            <label>Выберите базу</label>
+            <select id="cloneBaseSelect"></select>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeCloneModal()">Отмена</button>
+                <button class="btn-save" onclick="executeClone()">Клонировать</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Экспорт базы -->
+    <div class="modal-overlay" id="exportBaseModal">
+        <div class="modal-content">
+            <h2>📤 Экспорт базы</h2>
+            <label>Выберите базу для экспорта</label>
+            <select id="exportBaseSelect"></select>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeExportBaseModal()">Отмена</button>
+                <button class="btn-save" onclick="executeExportBase()">Экспортировать</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================================
+    СКРИПТЫ
+    ================================================================ -->
+    <script>
+        // ================================================================
+        // 1. ГЛОБАЛЬНОЕ СОСТОЯНИЕ
+        // ================================================================
+        let state = {
+            bases: [],
+            flowers: [],
+            history: [],
+            catalog: [],
+            user: { name: 'Вы', email: '', avatar: null, notifications: { push: true, email: false } },
+            currentBaseId: null,
+            currentPage: 'plants',
+            detailFlowerId: null,
+            isDetailEdit: false,
+            selectedCalendarDate: null,
+        };
+
+        // ================================================================
+        // 2. UUID ГЕНЕРАТОР
+        // ================================================================
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        // ================================================================
+        // 3. РАБОТА С ДАННЫМИ (LocalStorage)
+        // ================================================================
+        function loadState() {
+            try {
+                const raw = localStorage.getItem('flowerAppState');
+                if (raw) {
+                    const data = JSON.parse(raw);
+                    state.bases = data.bases || [];
+                    state.flowers = data.flowers || [];
+                    state.history = data.history || [];
+                    state.user = data.user || { name: 'Вы', email: '', avatar: null, notifications: { push: true,
+                            email: false } };
+                } else {
+                    initDemoData();
+                }
+            } catch (e) { initDemoData(); }
+        }
+
+        function saveState() {
+            const data = {
+                bases: state.bases,
+                flowers: state.flowers,
+                history: state.history,
+                user: state.user,
+            };
+            localStorage.setItem('flowerAppState', JSON.stringify(data));
+            updateCounts();
+        }
+
+        function initDemoData() {
+            const myBaseId = 'base_' + generateUUID();
+            state.bases = [{
+                id: myBaseId,
+                name: 'Моя квартира',
+                icon: '🏠',
+                owner: 'Вы',
+                createdAt: new Date().toISOString(),
+            }];
+            state.flowers = [];
+            state.history = [];
+            state.user = { name: 'Вы', email: '', avatar: null, notifications: { push: true, email: false } };
+
+            const f1 = {
+                id: 'flower_' + generateUUID(),
+                catalog_id: null,
+                base_id: myBaseId,
+                source_type: 'manual',
+                name: 'Фикус (тестовый)',
+                placement: 'Гостиная',
+                ageMonths: 6,
+                watering_summer: 3,
+                watering_winter: 7,
+                fertilizing: 30,
+                repot_interval: 2,
+                light: 'Рассеянный свет',
+                condition: 'Хорошее',
+                notes: 'Тестовое растение',
+                last_watering: new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0],
+                last_fertilizing: new Date(Date.now() - 20 * 86400000).toISOString().split('T')[0],
+                last_repotting: '2025-04-10',
+                createdAt: new Date().toISOString()
+            };
+            state.flowers.push(f1);
+            state.history.push({
+                id: 'hist_' + generateUUID(),
+                flower_id: f1.id,
+                date: new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0],
+                type: 'watering',
+                notes: 'Первый полив'
+            });
+            saveState();
+        }
+
+        function getBase(id) { return state.bases.find(b => b.id === id); }
+        function getFlower(id) { return state.flowers.find(f => f.id === id); }
+        function getFlowersByBase(baseId) { return state.flowers.filter(f => f.base_id === baseId); }
+        function getHistoryByFlower(flowerId) { return state.history.filter(h => h.flower_id === flowerId).sort((a, b) => a
+                .date.localeCompare(b.date)); }
+        function isBaseEditable(baseId) {
+            const base = getBase(baseId);
+            return base && base.owner === 'Вы';
+        }
+        function getBaseDisplayName(base) {
+            if (!base) return '—';
+            if (base.my_name && base.owner !== 'Вы') return base.my_name;
+            return base.name;
+        }
+
+        // ================================================================
+        // 4. СЕЗОННОСТЬ
+        // ================================================================
+        function getSeason() {
+            const m = new Date().getMonth();
+            if (m >= 2 && m <= 4) return 'spring';
+            if (m >= 5 && m <= 7) return 'summer';
+            if (m >= 8 && m <= 10) return 'autumn';
+            return 'winter';
+        }
+
+        function getWateringInterval(flower) {
+            const season = getSeason();
+            if (season === 'summer' || season === 'spring') return flower.watering_summer || 3;
+            return flower.watering_winter || 7;
+        }
+
+        function getWateringStatus(flower) {
+            const interval = getWateringInterval(flower);
+            const last = new Date(flower.last_watering || Date.now());
+            const diff = Math.floor((new Date() - last) / 86400000);
+            if (diff >= interval) return 'red';
+            if (diff >= interval - 1) return 'yellow';
+            return 'green';
+        }
+
+        function getDaysUntilWatering(flower) {
+            const interval = getWateringInterval(flower);
+            const last = new Date(flower.last_watering || Date.now());
+            const diff = Math.floor((new Date() - last) / 86400000);
+            return interval - diff;
+        }
+
+        function getNextWateringDate(flower) {
+            const interval = getWateringInterval(flower);
+            const last = new Date(flower.last_watering || Date.now());
+            const d = new Date(last);
+            d.setDate(d.getDate() + interval);
+            return d;
+        }
+
+        // ================================================================
+        // 5. КАТАЛОГ (ЗАГРУЗКА ИЗ LOCALSTORAGE)
+        // ================================================================
+        function loadCatalog() {
+            try {
+                const saved = localStorage.getItem('customCatalog');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    state.catalog = parsed.plants || [];
+                } else {
+                    state.catalog = [];
+                }
+            } catch (e) {
+                state.catalog = [];
+            }
+            updateCatalogStatus();
+            renderCatalog();
+        }
+
+        function saveCatalogToStorage() {
+            const data = { version: '2.0', plants: state.catalog };
+            localStorage.setItem('customCatalog', JSON.stringify(data));
+            updateCatalogStatus();
+            renderCatalog();
+        }
+
+        function updateCatalogStatus() {
+            const count = state.catalog.length;
+            document.getElementById('catalogStatus').textContent = count > 0 ? `Загружено ${count} растений` : 'Не загружен';
+        }
+
+        function getCatalogPlant(catalogId) {
+            return state.catalog.find(p => p.id === catalogId);
+        }
+
+        function renderCatalog() {
+            const container = document.getElementById('catalogList');
+            const search = document.getElementById('plantsSearch').value.toLowerCase();
+
+            const growthFilter = document.getElementById('filterGrowth').value;
+            const lightFilter = document.getElementById('filterLight').value;
+            const safetyFilter = document.getElementById('filterSafety').value;
+
+            if (state.catalog.length === 0) {
+                container.innerHTML = `
+                        <div class="empty-state">
+                            <span class="icon-big">🌱</span>
+                            <p>Каталог пуст</p>
+                            <p style="font-size:14px;color:#8aa08a;margin-top:4px;">Импортируйте JSON-файл с растениями в разделе "Профиль"</p>
+                            <button class="btn btn-outline" onclick="navigateTo('profile')">Перейти в профиль</button>
+                        </div>
+                    `;
+                return;
+            }
+
+            let list = state.catalog.filter(p => p.name.toLowerCase().includes(search));
+
+            if (growthFilter !== 'all') {
+                list = list.filter(p => p.growth_forms && p.growth_forms.includes(growthFilter));
+            }
+
+            if (lightFilter !== 'all') {
+                list = list.filter(p => p.light_needs === lightFilter);
+            }
+
+            if (safetyFilter === 'safe_pets') {
+                list = list.filter(p => !p.dangerous_pets);
+            } else if (safetyFilter === 'safe_children') {
+                list = list.filter(p => !p.dangerous_children);
+            } else if (safetyFilter === 'safe_all') {
+                list = list.filter(p => !p.dangerous_pets && !p.dangerous_children);
+            }
+
+            list.sort((a, b) => a.name.localeCompare(b.name));
+
+            container.innerHTML = list.map(p => `
+                    <div class="card" onclick="showCatalogPreview('${p.id}')">
+                        <div class="avatar">${p.icon || '🌿'}</div>
+                        <div class="info">
+                            <div class="title">${p.name}</div>
+                            <div class="sub">${p.description ? p.description.substring(0, 60) + '...' : ''}</div>
+                        </div>
+                        <div style="font-size:20px;">→</div>
+                    </div>
+                `).join('') || '<div style="text-align:center;padding:30px;color:#8aa08a;">🌱 Нет растений, соответствующих фильтрам</div>';
+        }
+
+        // ================================================================
+        // 6. ИМПОРТ / ЭКСПОРТ КАТАЛОГА
+        // ================================================================
+        function importCatalog(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.plants && Array.isArray(data.plants)) {
+                        state.catalog = data.plants;
+                        saveCatalogToStorage();
+                        alert('✅ Каталог импортирован (' + state.catalog.length + ' растений)');
+                        renderAll();
+                    } else {
+                        alert('❌ Неверный формат файла. Ожидается { "plants": [...] }');
+                    }
+                } catch (err) {
+                    alert('❌ Ошибка чтения файла: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function exportCatalog() {
+            if (state.catalog.length === 0) {
+                alert('Каталог пуст. Нечего экспортировать.');
+                return;
+            }
+            const data = { version: '2.0', plants: state.catalog };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'catalog_' + new Date().toISOString().split('T')[0] + '.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function clearCatalog() {
+            if (state.catalog.length === 0) {
+                alert('Каталог уже пуст.');
+                return;
+            }
+            if (!confirm('🗑 Удалить весь каталог растений? Растения в ваших базах не пострадают.')) return;
+            state.catalog = [];
+            localStorage.removeItem('customCatalog');
+            updateCatalogStatus();
+            renderCatalog();
+            alert('✅ Каталог очищен');
+        }
+
+        // ================================================================
+        // 7. ЛОГИ
+        // ================================================================
+        function getLogs() {
+            try {
+                const raw = localStorage.getItem('appLogs');
+                return raw ? JSON.parse(raw) : [];
+            } catch (e) { return []; }
+        }
+
+        function saveLog(entry) {
+            const logs = getLogs();
+            logs.push({
+                timestamp: new Date().toISOString(),
+                ...entry
+            });
+            localStorage.setItem('appLogs', JSON.stringify(logs));
+        }
+
+        function exportLogs() {
+            const logs = getLogs();
+            if (logs.length === 0) {
+                alert('Логи пусты');
+                return;
+            }
+            const data = JSON.stringify(logs, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'phytonote_logs_' + new Date().toISOString().split('T')[0] + '.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // ================================================================
+        // 8. ПРЕВЬЮ КАТАЛОГА
+        // ================================================================
+        function showCatalogPreview(catalogId) {
+            const plant = state.catalog.find(p => p.id === catalogId);
+            if (!plant) return;
+            if (state.bases.length === 0) {
+                alert('Сначала создайте базу в разделе "Мои растения"');
+                return;
+            }
+            const myBases = state.bases.filter(b => b.owner === 'Вы');
+            if (myBases.length === 0) {
+                alert('У вас нет своих баз. Создайте базу в разделе "Мои растения"');
+                return;
+            }
+            const basesOptions = myBases.map(b => `<option value="${b.id}">${b.icon} ${getBaseDisplayName(b)}</option>`).join(
+                '');
+
+            const growthForm = plant.growth_forms ? plant.growth_forms.join(', ') : '—';
+            const dangerPets = plant.dangerous_pets ? '⚠️ Да' : '✅ Нет';
+            const dangerChildren = plant.dangerous_children ? '⚠️ Да' : '✅ Нет';
+
+            const overlay = document.createElement('div');
+            overlay.className = 'modal-overlay show';
+            overlay.id = 'previewModal';
+            overlay.innerHTML = `
+                    <div class="modal-content">
+                        <div style="display:flex;justify-content:flex-end;">
+                            <button class="edit-toggle" onclick="document.getElementById('previewModal').remove()">✕</button>
+                        </div>
+                        <div style="padding:10px 0;">
+                            <div style="text-align:center;">
+                                <div style="font-size:48px;">${plant.icon || '🌿'}</div>
+                                <div style="font-size:20px;font-weight:700;margin:8px 0;">${plant.name}</div>
+                                <div style="font-size:14px;color:#5c725c;margin-bottom:12px;">${plant.description || ''}</div>
+                            </div>
+                            <div style="text-align:left;font-size:14px;background:#f4f7f4;padding:12px;border-radius:12px;">
+                                📂 Форма роста: ${growthForm}<br>
+                                ☀️ Свет: ${plant.light_needs || '—'}<br>
+                                ${plant.dangerous_pets ? '⚠️ Опасно для животных: Да' : '✅ Безопасно для животных'}<br>
+                                ${plant.dangerous_children ? '⚠️ Опасно для детей: Да' : '✅ Безопасно для детей'}<br>
+                                💧 Полив: летом ${plant.default_watering_summer || 3} дн., зимой ${plant.default_watering_winter || 7} дн.<br>
+                                🧪 Подкормка: ${plant.default_fertilizing || 30} дн.<br>
+                                🔄 Пересадка: ${plant.default_repot_interval || 2} года<br>
+                                🌱 Грунт: ${plant.default_soil || '—'}
+                            </div>
+                            ${plant.care_guide ? `
+                                <div style="margin-top:12px;">
+                                    <div style="font-weight:600;font-size:14px;margin-bottom:4px;">📖 Подробный уход</div>
+                                    <div class="care-guide">${plant.care_guide}</div>
+                                </div>
+                            ` : ''}
+                            <div style="margin-top:14px;">
+                                <label style="font-weight:600;">Добавить в базу:</label>
+                                <select id="previewBaseSelect" style="width:100%;padding:10px;border-radius:12px;border:1px solid #dce4dc;margin-top:4px;font-size:14px;">${basesOptions}</select>
+                                <label style="font-weight:600;margin-top:8px;display:block;">Расположение:</label>
+                                <input id="previewPlacement" placeholder="Кабинет, кухня..." style="width:100%;padding:10px;border-radius:12px;border:1px solid #dce4dc;margin-top:4px;font-size:14px;">
+                                <label style="font-weight:600;margin-top:8px;display:block;">Возраст (месяцев):</label>
+                                <input id="previewAge" type="number" value="0" style="width:100%;padding:10px;border-radius:12px;border:1px solid #dce4dc;margin-top:4px;font-size:14px;">
+                                <button class="btn" onclick="addFromPreview('${plant.id}')" style="margin-top:12px;">➕ Добавить в базу</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            document.body.appendChild(overlay);
+            overlay.addEventListener('click', function(e) { if (e.target === this) this.remove(); });
+        }
+
+        function addFromPreview(catalogId) {
+            const select = document.getElementById('previewBaseSelect');
+            const baseId = select ? select.value : null;
+            const placement = document.getElementById('previewPlacement')?.value || '—';
+            const age = parseInt(document.getElementById('previewAge')?.value) || 0;
+            if (!baseId || !getBase(baseId)) { alert('Выберите базу'); return; }
+            const plant = state.catalog.find(p => p.id === catalogId);
+            if (!plant) return;
+
+            const flower = {
+                id: 'flower_' + generateUUID(),
+                catalog_id: plant.id,
+                base_id: baseId,
+                source_type: 'catalog',
+                name: plant.name,
+                placement: placement,
+                ageMonths: age,
+                watering_summer: plant.default_watering_summer || 3,
+                watering_winter: plant.default_watering_winter || 7,
+                fertilizing: plant.default_fertilizing || 30,
+                repot_interval: plant.default_repot_interval || 2,
+                light: plant.default_light || 'Рассеянный свет',
+                condition: 'Хорошее',
+                notes: plant.default_soil ? 'Грунт: ' + plant.default_soil : '',
+                last_watering: new Date().toISOString().split('T')[0],
+                last_fertilizing: new Date().toISOString().split('T')[0],
+                last_repotting: new Date().toISOString().split('T')[0],
+                createdAt: new Date().toISOString()
+            };
+            state.flowers.push(flower);
+            state.history.push({
+                id: 'hist_' + generateUUID(),
+                flower_id: flower.id,
+                date: new Date().toISOString().split('T')[0],
+                type: 'watering',
+                notes: 'Добавлено из каталога'
+            });
+            saveState();
+            document.getElementById('previewModal')?.remove();
+            renderAll();
+            alert('✅ ' + plant.name + ' добавлен в базу!');
+        }
+
+        // ================================================================
+        // 9. БАЗЫ
+        // ================================================================
+        function renderBases() {
+            const container = document.getElementById('basesContainer');
+            if (state.bases.length === 0) {
+                container.innerHTML =
+                    '<div style="text-align:center;padding:30px;color:#8aa08a;">🌱 Нет баз. Создайте свою первую!</div>';
+                return;
+            }
+            const myBases = state.bases.filter(b => b.owner === 'Вы');
+            const otherBases = state.bases.filter(b => b.owner !== 'Вы');
+            let html = '';
+            if (myBases.length > 0) {
+                html += myBases.map(b => baseCardHtml(b)).join('');
+            }
+            if (otherBases.length > 0) {
+                html += `<div style="font-weight:600;font-size:15px;color:#5c725c;margin:12px 0 8px 0;">🌐 Общие базы</div>`;
+                html += otherBases.map(b => baseCardHtml(b)).join('');
+            }
+            container.innerHTML = html;
+        }
+
+        function baseCardHtml(b) {
+            const displayName = getBaseDisplayName(b);
+            const ownerLabel = b.owner !== 'Вы' ? ` · 👤 ${b.owner}` : '';
+            const ownerLetter = b.owner !== 'Вы' ? b.owner.charAt(0).toUpperCase() : '';
+            return `
+                    <div class="card" onclick="openBase('${b.id}')">
+                        <div class="avatar">
+                            ${b.owner !== 'Вы' ? `<span class="letter">${ownerLetter}</span>` : b.icon || '📁'}
+                        </div>
+                        <div class="info">
+                            <div class="title">${displayName} ${b.owner !== 'Вы' ? '🔒' : ''}</div>
+                            <div class="sub">${getFlowersByBase(b.id).length} растений${ownerLabel}</div>
+                        </div>
+                        <div style="font-size:20px;">→</div>
+                    </div>
+                `;
+        }
+
+        function openBase(baseId) {
+            state.currentBaseId = baseId;
+            document.getElementById('basesList').style.display = 'none';
+            document.getElementById('basePlantsView').style.display = 'block';
+            const base = getBase(baseId);
+            const displayName = getBaseDisplayName(base);
+            document.getElementById('currentBaseIcon').textContent = base ? base.icon || '🏠' : '🏠';
+            document.getElementById('currentBaseTitle').textContent = displayName;
+            const isEditable = isBaseEditable(baseId);
+            document.getElementById('currentBaseOwner').textContent = base && base.owner !== 'Вы' ? `👤 ${base.owner}` : '';
+            document.getElementById('editBaseNameBtn').style.display = 'inline-block';
+            document.getElementById('addPlantBtn').style.display = isEditable ? 'block' : 'none';
+
+            const management = document.getElementById('baseManagement');
+            if (isEditable) {
+                management.style.display = 'block';
+                document.getElementById('deleteBaseBtn').textContent = '🗑 Удалить базу';
+                document.getElementById('deleteBaseBtn').onclick = deleteCurrentBase;
+            } else {
+                management.style.display = 'block';
+                document.getElementById('deleteBaseBtn').textContent = '🔌 Отключиться от базы';
+                document.getElementById('deleteBaseBtn').onclick = disconnectFromBase;
+            }
+            renderBasePlants();
+        }
+
+        function backToBases() {
+            document.getElementById('basesList').style.display = 'block';
+            document.getElementById('basePlantsView').style.display = 'none';
+            renderBases();
+        }
+
+        function renderBasePlants() {
+            if (!state.currentBaseId) return;
+            const container = document.getElementById('basePlantsList');
+            const search = document.getElementById('gardenSearch').value.toLowerCase();
+            const isEditable = isBaseEditable(state.currentBaseId);
+            let list = getFlowersByBase(state.currentBaseId).filter(f => f.name.toLowerCase().includes(search));
+            container.innerHTML = list.map(f => {
+                const status = getWateringStatus(f);
+                const days = getDaysUntilWatering(f);
+                const dotClass = status === 'red' ? 'red' : status === 'yellow' ? 'yellow' : 'green';
+                const catalogPlant = getCatalogPlant(f.catalog_id);
+                const hasCare = catalogPlant && catalogPlant.care_guide && catalogPlant.care_guide.trim().length >
+                    0;
+                return `
+                        <div class="card" onclick="${isEditable ? `showDetail('${f.id}')` : `showReadOnlyDetail('${f.id}')`}">
+                            <div class="avatar">🌿</div>
+                            <div class="info">
+                                <div class="title">${f.name}</div>
+                                <div class="sub">${f.placement || '—'} · ${f.ageMonths !== undefined ? f.ageMonths + ' мес.' : ''}</div>
+                                <div class="meta"><span>💧 ${days > 0 ? days + ' дн.' : 'сегодня'}</span></div>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                ${!isEditable ? '<span class="badge-owner">👁️</span>' : ''}
+                                ${hasCare ? '<span class="badge-owner">📖</span>' : ''}
+                                <div class="status-dot ${dotClass}"></div>
+                            </div>
+                        </div>
+                    `;
+            }).join('') || '<div style="text-align:center;padding:30px;color:#8aa08a;">🌱 Нет растений в этой базе</div>';
+        }
+
+        // ================================================================
+        // 10. УПРАВЛЕНИЕ БАЗАМИ
+        // ================================================================
+        function deleteCurrentBase() {
+            const base = getBase(state.currentBaseId);
+            if (!base) return;
+            if (!confirm(`Удалить базу "${getBaseDisplayName(base)}" и все растения в ней?`)) return;
+            state.flowers = state.flowers.filter(f => f.base_id !== base.id);
+            state.history = state.history.filter(h => {
+                const flower = state.flowers.find(f => f.id === h.flower_id);
+                return flower && flower.base_id !== base.id;
+            });
+            state.bases = state.bases.filter(b => b.id !== base.id);
+            saveState();
+            backToBases();
+            renderAll();
+            alert('✅ База удалена');
+        }
+
+        function disconnectFromBase() {
+            const base = getBase(state.currentBaseId);
+            if (!base) return;
+            if (!confirm(`Отключиться от базы "${getBaseDisplayName(base)}"? Растения останутся у владельца.`)) return;
+            state.bases = state.bases.filter(b => b.id !== base.id);
+            state.flowers = state.flowers.filter(f => f.base_id !== base.id);
+            state.history = state.history.filter(h => {
+                const flower = state.flowers.find(f => f.id === h.flower_id);
+                return flower && flower.base_id !== base.id;
+            });
+            saveState();
+            backToBases();
+            renderAll();
+            alert('✅ Вы отключились от базы');
+        }
+
+        // ================================================================
+        // 11. СОЗДАНИЕ БАЗЫ
+        // ================================================================
+        let selectedIcon = '🏠';
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('#iconSelector button').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('#iconSelector button').forEach(b => b.classList.remove(
+                    'selected'));
+                    this.classList.add('selected');
+                    selectedIcon = this.dataset.icon;
+                });
+            });
+        });
+
+        function showCreateBaseModal() {
+            document.getElementById('createBaseModal').classList.add('show');
+            document.querySelectorAll('#iconSelector button').forEach(b => b.classList.remove('selected'));
+            document.querySelector('#iconSelector button[data-icon="🏠"]')?.classList.add('selected');
+            selectedIcon = '🏠';
+            document.getElementById('baseNameInput').value = '';
+        }
+
+        function closeCreateBaseModal() {
+            document.getElementById('createBaseModal').classList.remove('show');
+        }
+
+        function createBase() {
+            const name = document.getElementById('baseNameInput').value.trim();
+            if (!name) { alert('Введите название'); return; }
+            state.bases.push({
+                id: 'base_' + generateUUID(),
+                name: name,
+                icon: selectedIcon,
+                owner: 'Вы',
+                createdAt: new Date().toISOString(),
+            });
+            saveState();
+            closeCreateBaseModal();
+            renderAll();
+        }
+
+        function editBaseName() {
+            const base = getBase(state.currentBaseId);
+            if (!base) return;
+            const currentDisplay = getBaseDisplayName(base);
+            const newName = prompt('Новое название базы (только для вас):', currentDisplay);
+            if (newName && newName.trim()) {
+                if (base.owner === 'Вы') {
+                    base.name = newName.trim();
+                } else {
+                    base.my_name = newName.trim();
+                }
+                saveState();
+                document.getElementById('currentBaseTitle').textContent = getBaseDisplayName(base);
+                renderBases();
+                renderBasePlants();
+            }
+        }
+
+        // ================================================================
+        // 12. РАСТЕНИЯ (Добавление/Редактирование)
+        // ================================================================
+        function showAddPlantModal(editId) {
+            if (!isBaseEditable(state.currentBaseId)) {
+                alert('Это чужая база, вы не можете добавлять растения.');
+                return;
+            }
+            const modal = document.getElementById('plantModal');
+            modal.classList.add('show');
+            document.getElementById('plantModalTitle').textContent = editId ? '✏️ Редактировать' : '➕ Новое растение';
+            document.getElementById('editFlowerId').value = editId || '';
+            if (editId) {
+                const f = getFlower(editId);
+                if (f) {
+                    document.getElementById('fName').value = f.name;
+                    document.getElementById('fPlacement').value = f.placement || '';
+                    document.getElementById('fAge').value = f.ageMonths || 0;
+                    document.getElementById('fWaterSummer').value = f.watering_summer;
+                    document.getElementById('fWaterWinter').value = f.watering_winter;
+                    document.getElementById('fFert').value = f.fertilizing || 0;
+                    document.getElementById('fRepot').value = f.repot_interval;
+                    document.getElementById('fLight').value = f.light || 'Рассеянный свет';
+                    document.getElementById('fCondition').value = f.condition || 'Хорошее';
+                    document.getElementById('fNotes').value = f.notes || '';
+                    return;
+                }
+            }
+            document.getElementById('fName').value = '';
+            document.getElementById('fPlacement').value = '';
+            document.getElementById('fAge').value = 0;
+            document.getElementById('fWaterSummer').value = 3;
+            document.getElementById('fWaterWinter').value = 7;
+            document.getElementById('fFert').value = 30;
+            document.getElementById('fRepot').value = 2;
+            document.getElementById('fLight').value = 'Рассеянный свет';
+            document.getElementById('fCondition').value = 'Хорошее';
+            document.getElementById('fNotes').value = '';
+        }
+
+        function closePlantModal() {
+            document.getElementById('plantModal').classList.remove('show');
+        }
+
+        function saveFlower() {
+            const name = document.getElementById('fName').value.trim();
+            if (!name) { alert('Введите название'); return; }
+            const editId = document.getElementById('editFlowerId').value;
+            const data = {
+                name: name,
+                placement: document.getElementById('fPlacement').value || '—',
+                ageMonths: parseInt(document.getElementById('fAge').value) || 0,
+                watering_summer: parseInt(document.getElementById('fWaterSummer').value) || 3,
+                watering_winter: parseInt(document.getElementById('fWaterWinter').value) || 7,
+                fertilizing: parseInt(document.getElementById('fFert').value) || 0,
+                repot_interval: parseInt(document.getElementById('fRepot').value) || 2,
+                light: document.getElementById('fLight').value,
+                condition: document.getElementById('fCondition').value,
+                notes: document.getElementById('fNotes').value || '',
+            };
+            if (editId) {
+                const f = getFlower(editId);
+                if (f) Object.assign(f, data);
+            } else {
+                const flower = {
+                    id: 'flower_' + generateUUID(),
+                    catalog_id: null,
+                    base_id: state.currentBaseId,
+                    source_type: 'manual',
+                    ...data,
+                    last_watering: new Date().toISOString().split('T')[0],
+                    last_fertilizing: new Date().toISOString().split('T')[0],
+                    last_repotting: new Date().toISOString().split('T')[0],
+                    createdAt: new Date().toISOString()
+                };
+                state.flowers.push(flower);
+                state.history.push({
+                    id: 'hist_' + generateUUID(),
+                    flower_id: flower.id,
+                    date: new Date().toISOString().split('T')[0],
+                    type: 'watering',
+                    notes: 'Создано вручную'
+                });
+            }
+            saveState();
+            closePlantModal();
+            renderAll();
+        }
+
+        // ================================================================
+        // 13. ДЕТАЛЬНЫЙ ПРОСМОТР
+        // ================================================================
+        function showDetail(flowerId) {
+            state.detailFlowerId = flowerId;
+            state.isDetailEdit = false;
+            document.getElementById('detailEditBtn').textContent = '✏️';
+            renderDetail();
+            document.getElementById('detailModal').classList.add('show');
+        }
+
+        function renderDetail() {
+            const f = getFlower(state.detailFlowerId);
+            if (!f) return;
+            const base = getBase(f.base_id);
+            const isEditable = isBaseEditable(f.base_id);
+            const history = getHistoryByFlower(f.id);
+            const status = getWateringStatus(f);
+            const days = getDaysUntilWatering(f);
+            const statusText = status === 'red' ? '🔴 Пора поливать' : status === 'yellow' ? '🟡 Скоро полив' :
+                '🟢 В норме';
+            const historyHtml = history.slice(-5).reverse().map(h => `
+                    <div class="history-item">
+                        <span>${h.date}</span>
+                        <span>${h.type === 'watering' ? '💧 Полив' : h.type === 'fertilizing' ? '🧪 Подкормка' : '🔄 Пересадка'}</span>
+                        <span>${h.notes || ''}</span>
+                    </div>
+                `).join('') || 'Нет истории';
+
+            const editMode = state.isDetailEdit && isEditable;
+            const catalogPlant = getCatalogPlant(f.catalog_id);
+            const hasCare = catalogPlant && catalogPlant.care_guide && catalogPlant.care_guide.trim().length > 0;
+            const canReset = catalogPlant && f.source_type === 'catalog';
+
+            document.getElementById('detailTitle').textContent = '🌿 ' + f.name;
+
+            let bodyHtml = `
+                    <div class="detail-card">
+                        <div class="detail-field">
+                            <span class="label">📍 База</span>
+                            <span class="value">${base ? getBaseDisplayName(base) + (base.owner !== 'Вы' ? ' (👤 ' + base.owner + ')' : '') : '—'}</span>
+                        </div>
+                        <div class="detail-field">
+                            <span class="label">📌 Расположение</span>
+                            ${editMode ? `<input id="detailPlacement" value="${f.placement || ''}">` : `<span class="value">${f.placement || '—'}</span>`}
+                        </div>
+                        <div class="detail-field">
+                            <span class="label">📅 Возраст (мес.)</span>
+                            ${editMode ? `<input id="detailAge" type="number" value="${f.ageMonths || 0}" min="0">` : `<span class="value">${f.ageMonths || 0} мес.</span>`}
+                        </div>
+                        <div class="detail-field">
+                            <span class="label">💧 Полив (лето)</span>
+                            ${editMode ? `<input id="detailWaterSummer" type="number" value="${f.watering_summer}" min="1">` : `<span class="value">${f.watering_summer} дн.</span>`}
+                        </div>
+                        <div class="detail-field">
+                            <span class="label">💧 Полив (зима)</span>
+                            ${editMode ? `<input id="detailWaterWinter" type="number" value="${f.watering_winter}" min="1">` : `<span class="value">${f.watering_winter} дн.</span>`}
+                        </div>
+                        <div class="detail-field">
+                            <span class="label">🧪 Подкормка</span>
+                            ${editMode ? `<input id="detailFert" type="number" value="${f.fertilizing || 0}" min="0">` : `<span class="value">${f.fertilizing > 0 ? f.fertilizing + ' дн.' : 'нет'}</span>`}
+                        </div>
+                        <div class="detail-field">
+                            <span class="label">🔄 Пересадка</span>
+                            ${editMode ? `<input id="detailRepot" type="number" value="${f.repot_interval}" min="1">` : `<span class="value">${f.repot_interval} лет</span>`}
+                        </div>
+                        <div class="detail-field">
+                            <span class="label">☀️ Освещённость</span>
+                            ${editMode ? `
+                                    <select id="detailLight">
+                                        <option value="Яркий свет" ${f.light === 'Яркий свет' ? 'selected' : ''}>☀️ Яркий свет</option>
+                                        <option value="Рассеянный свет" ${f.light === 'Рассеянный свет' ? 'selected' : ''}>🌤 Рассеянный</option>
+                                        <option value="Полутень" ${f.light === 'Полутень' ? 'selected' : ''}>🌥 Полутень</option>
+                                        <option value="Тень" ${f.light === 'Тень' ? 'selected' : ''}>🌑 Тень</option>
+                                    </select>
+                                ` : `<span class="value">${f.light || '—'}</span>`}
+                        </div>
+                        <div class="detail-field">
+                            <span class="label">💚 Состояние</span>
+                            ${editMode ? `
+                                    <select id="detailCondition">
+                                        <option value="Отличное" ${f.condition === 'Отличное' ? 'selected' : ''}>💚 Отличное</option>
+                                        <option value="Хорошее" ${f.condition === 'Хорошее' ? 'selected' : ''}>💛 Хорошее</option>
+                                        <option value="Удовлетворительное" ${f.condition === 'Удовлетворительное' ? 'selected' : ''}>🧡 Удовл.</option>
+                                        <option value="Плохое" ${f.condition === 'Плохое' ? 'selected' : ''}>❤️ Плохое</option>
+                                    </select>
+                                ` : `<span class="value">${f.condition || '—'}</span>`}
+                        </div>
+                        <div class="detail-field">
+                            <span class="label">📅 Последний полив</span>
+                            ${editMode ? `<input id="detailLastWatering" type="date" value="${f.last_watering || ''}">` : `<span class="value">${f.last_watering || '—'} (${statusText})</span>`}
+                        </div>
+                        <div class="detail-field">
+                            <span class="label">🧪 Последняя подкормка</span>
+                            ${editMode ? `<input id="detailLastFertilizing" type="date" value="${f.last_fertilizing || ''}">` : `<span class="value">${f.last_fertilizing || '—'}</span>`}
+                        </div>
+                        <div class="detail-field">
+                            <span class="label">📝 Примечания</span>
+                            ${editMode ? `<textarea id="detailNotes" rows="2">${f.notes || ''}</textarea>` : `<span class="value">${f.notes || '—'}</span>`}
+                        </div>
+                        ${editMode ? `<button class="btn" onclick="saveDetailEdit()" style="margin-top:10px;">💾 Сохранить</button>` : ''}
+                    </div>
+                `;
+
+            const actionsHtml = `
+                    <div id="detailActions" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:12px;">
+                        ${isEditable ? `
+                            <button class="btn" style="flex:1;min-width:80px;" onclick="detailWaterNow()">💧 Полил</button>
+                            <button class="btn" style="flex:1;min-width:80px;background:#3a7a3a;" onclick="detailFertilizeNow()">🧪 Подкормил</button>
+                        ` : `
+                            <span class="readonly-badge" style="margin:auto;">🔒 Редактирование недоступно</span>
+                        `}
+                    </div>
+                `;
+
+            const historyHtmlBlock = `
+                    <div style="margin-top:10px;">
+                        <div style="font-weight:600;font-size:14px;">📜 История (последние 5)</div>
+                        ${historyHtml}
+                    </div>
+                `;
+
+            const careHtml = hasCare ? `
+                    <div style="margin-top:12px;">
+                        <div style="font-weight:600;font-size:14px;margin-bottom:4px;">📖 Подробный уход</div>
+                        <div class="care-guide">${catalogPlant.care_guide}</div>
+                    </div>
+                ` : '';
+
+            const resetHtml = canReset ? `
+                    <button class="btn btn-outline" onclick="resetToCatalogDefaults('${f.id}')" style="margin-top:8px;">🔄 Сбросить к рекомендуемым</button>
+                ` : '';
+
+            const managementHtml = `
+                    <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:12px;">
+                        <button class="btn btn-outline" style="flex:1;min-width:80px;" onclick="showCloneModal()">📋 Клонировать</button>
+                        ${isEditable ? `<button class="btn btn-danger" style="flex:1;min-width:80px;" onclick="resetFlowerHistory()">🗑 Сброс истории</button>` : ''}
+                        ${isEditable ? `<button class="btn btn-danger" style="flex:1;min-width:80px;background:#b52a2a;" onclick="deleteFlower()">❌ Удалить</button>` : ''}
+                    </div>
+                    ${resetHtml}
+                    ${!isEditable ? '<div style="text-align:center;margin-top:10px;"><span class="readonly-badge">🔒 Только просмотр</span></div>' : ''}
+                `;
+
+            document.getElementById('detailBody').innerHTML = bodyHtml + actionsHtml + historyHtmlBlock + careHtml +
+                managementHtml;
+            document.getElementById('detailEditBtn').style.display = isEditable ? 'inline-block' : 'none';
+        }
+
+        function resetToCatalogDefaults(flowerId) {
+            const f = getFlower(flowerId);
+            if (!f) return;
+            const catalogPlant = getCatalogPlant(f.catalog_id);
+            if (!catalogPlant) {
+                alert('Нет данных в каталоге для этого растения.');
+                return;
+            }
+            if (!confirm(`Сбросить настройки ухода для "${f.name}" к рекомендуемым из каталога?`)) return;
+
+            f.watering_summer = catalogPlant.default_watering_summer || 3;
+            f.watering_winter = catalogPlant.default_watering_winter || 7;
+            f.fertilizing = catalogPlant.default_fertilizing || 30;
+            f.repot_interval = catalogPlant.default_repot_interval || 2;
+            f.light = catalogPlant.default_light || 'Рассеянный свет';
+
+            saveState();
+            renderDetail();
+            renderAll();
+            alert('✅ Настройки сброшены к рекомендуемым!');
+        }
+
+        function toggleDetailEdit() {
+            const f = getFlower(state.detailFlowerId);
+            if (!f) return;
+            if (!isBaseEditable(f.base_id)) {
+                alert('Это чужая база, редактирование недоступно.');
+                return;
+            }
+            state.isDetailEdit = !state.isDetailEdit;
+            document.getElementById('detailEditBtn').textContent = state.isDetailEdit ? '✅' : '✏️';
+            renderDetail();
+        }
+
+        function saveDetailEdit() {
+            const f = getFlower(state.detailFlowerId);
+            if (!f) return;
+            f.placement = document.getElementById('detailPlacement')?.value || '—';
+            f.ageMonths = parseInt(document.getElementById('detailAge')?.value) || 0;
+            f.watering_summer = parseInt(document.getElementById('detailWaterSummer')?.value) || 3;
+            f.watering_winter = parseInt(document.getElementById('detailWaterWinter')?.value) || 7;
+            f.fertilizing = parseInt(document.getElementById('detailFert')?.value) || 0;
+            f.repot_interval = parseInt(document.getElementById('detailRepot')?.value) || 2;
+            f.light = document.getElementById('detailLight')?.value || 'Рассеянный свет';
+            f.condition = document.getElementById('detailCondition')?.value || 'Хорошее';
+            f.notes = document.getElementById('detailNotes')?.value || '';
+
+            const newWatering = document.getElementById('detailLastWatering')?.value;
+            if (newWatering) f.last_watering = newWatering;
+
+            const newFertilizing = document.getElementById('detailLastFertilizing')?.value;
+            if (newFertilizing) f.last_fertilizing = newFertilizing;
+
+            saveState();
+            state.isDetailEdit = false;
+            document.getElementById('detailEditBtn').textContent = '✏️';
+            renderDetail();
+            renderAll();
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detailModal').classList.remove('show');
+            state.detailFlowerId = null;
+            state.isDetailEdit = false;
+        }
+
+        // ================================================================
+        // 14. ЧУЖАЯ БАЗА (ТОЛЬКО ПРОСМОТР)
+        // ================================================================
+        function showReadOnlyDetail(flowerId) {
+            state.detailFlowerId = flowerId;
+            state.isDetailEdit = false;
+            document.getElementById('detailEditBtn').textContent = '👁️';
+            renderDetail();
+            document.getElementById('detailModal').classList.add('show');
+        }
+
+        // ================================================================
+        // 15. ДЕЙСТВИЯ В КАРТОЧКЕ
+        // ================================================================
+        function detailWaterNow() {
+            const f = getFlower(state.detailFlowerId);
+            if (!f) return;
+            if (!isBaseEditable(f.base_id)) { alert('Это чужая база'); return; }
+            const today = getLocalDateStr(new Date());
+            f.last_watering = today;
+            state.history.push({ id: 'hist_' + generateUUID(), flower_id: f.id, date: today, type: 'watering',
+                notes: 'Полив' });
+            saveState();
+            renderDetail();
+            renderAll();
+        }
+
+        function detailFertilizeNow() {
+            const f = getFlower(state.detailFlowerId);
+            if (!f) return;
+            if (!isBaseEditable(f.base_id)) { alert('Это чужая база'); return; }
+            const today = getLocalDateStr(new Date());
+            f.last_fertilizing = today;
+            state.history.push({ id: 'hist_' + generateUUID(), flower_id: f.id, date: today, type: 'fertilizing',
+                notes: 'Подкормка' });
+            saveState();
+            renderDetail();
+            renderAll();
+        }
+
+        function resetFlowerHistory() {
+            if (!confirm('🗑 Удалить ВСЮ историю ухода для этого растения?')) return;
+            const f = getFlower(state.detailFlowerId);
+            if (!f) return;
+            if (!isBaseEditable(f.base_id)) { alert('Это чужая база'); return; }
+            state.history = state.history.filter(h => h.flower_id !== f.id);
+            saveState();
+            renderDetail();
+            renderAll();
+        }
+
+        function deleteFlower() {
+            if (!confirm('❌ Удалить это растение?')) return;
+            const f = getFlower(state.detailFlowerId);
+            if (!f) return;
+            if (!isBaseEditable(f.base_id)) { alert('Это чужая база'); return; }
+            state.flowers = state.flowers.filter(fl => fl.id !== f.id);
+            state.history = state.history.filter(h => h.flower_id !== f.id);
+            saveState();
+            closeDetailModal();
+            renderAll();
+        }
+
+        // ================================================================
+        // 16. КЛОНИРОВАНИЕ
+        // ================================================================
+        function showCloneModal() {
+            const myBases = state.bases.filter(b => b.owner === 'Вы');
+            if (myBases.length === 0) { alert('У вас нет своих баз'); return; }
+            const select = document.getElementById('cloneBaseSelect');
+            select.innerHTML = myBases.map(b => `<option value="${b.id}">${b.icon} ${getBaseDisplayName(b)}</option>`)
+                .join('');
+            document.getElementById('cloneModal').classList.add('show');
+        }
+
+        function closeCloneModal() {
+            document.getElementById('cloneModal').classList.remove('show');
+        }
+
+        function executeClone() {
+            const targetBaseId = document.getElementById('cloneBaseSelect').value;
+            const original = getFlower(state.detailFlowerId);
+            if (!original) return;
+            if (original.base_id === targetBaseId) { alert('Выберите другую базу'); return; }
+            const clone = {
+                id: 'flower_' + generateUUID(),
+                catalog_id: original.catalog_id,
+                base_id: targetBaseId,
+                source_type: 'cloned',
+                name: original.name + ' (клон)',
+                placement: original.placement || '—',
+                ageMonths: original.ageMonths || 0,
+                watering_summer: original.watering_summer,
+                watering_winter: original.watering_winter,
+                fertilizing: original.fertilizing,
+                repot_interval: original.repot_interval,
+                light: original.light,
+                condition: original.condition,
+                notes: original.notes || '',
+                last_watering: new Date().toISOString().split('T')[0],
+                last_fertilizing: new Date().toISOString().split('T')[0],
+                last_repotting: new Date().toISOString().split('T')[0],
+                createdAt: new Date().toISOString()
+            };
+            state.flowers.push(clone);
+            state.history.push({ id: 'hist_' + generateUUID(), flower_id: clone.id, date: new Date().toISOString().split(
+                    'T')[0], type: 'watering', notes: 'Клон' });
+            saveState();
+            closeCloneModal();
+            renderAll();
+            alert('✅ Клон создан');
+        }
+
+        // ================================================================
+        // 17. ЭКСПОРТ/ИМПОРТ БАЗ
+        // ================================================================
+        function showExportBaseModal() {
+            if (state.bases.length === 0) { alert('Нет баз для экспорта'); return; }
+            const select = document.getElementById('exportBaseSelect');
+            select.innerHTML = state.bases.map(b => `<option value="${b.id}">${b.icon} ${getBaseDisplayName(b)}</option>`)
+                .join('');
+            document.getElementById('exportBaseModal').classList.add('show');
+        }
+
+        function closeExportBaseModal() {
+            document.getElementById('exportBaseModal').classList.remove('show');
+        }
+
+        function executeExportBase() {
+            const baseId = document.getElementById('exportBaseSelect').value;
+            const base = getBase(baseId);
+            if (!base) return;
+            const flowers = getFlowersByBase(baseId);
+            const history = state.history.filter(h => flowers.some(f => f.id === h.flower_id));
+            const data = { base, flowers, history, exportedAt: new Date().toISOString() };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `base_${base.name}_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            closeExportBaseModal();
+        }
+
+        function importBase(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (!data.base || !data.flowers) { alert('Неверный формат'); return; }
+                    if (state.bases.some(b => b.name === data.base.name && b.owner === 'Вы')) {
+                        if (!confirm(`База "${data.base.name}" уже существует. Создать копию?`)) return;
+                        data.base.name = data.base.name + ' (копия)';
+                    }
+                    const newBaseId = 'base_' + generateUUID();
+                    data.base.id = newBaseId;
+                    data.base.owner = 'Вы';
+                    state.bases.push(data.base);
+                    data.flowers.forEach(f => {
+                        const newId = 'flower_' + generateUUID();
+                        const oldId = f.id;
+                        f.id = newId;
+                        f.base_id = newBaseId;
+                        state.flowers.push(f);
+                        data.history?.forEach(h => {
+                            if (h.flower_id === oldId) {
+                                state.history.push({ ...h, id: 'hist_' + generateUUID(),
+                                    flower_id: newId });
+                            }
+                        });
+                    });
+                    saveState();
+                    renderAll();
+                    alert('✅ База импортирована');
+                } catch (err) { alert('Ошибка: ' + err.message); }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        // ================================================================
+        // 18. ЭКСПОРТ/ИМПОРТ ВСЕХ ДАННЫХ
+        // ================================================================
+        function exportAllData() {
+            const data = { bases: state.bases, flowers: state.flowers, history: state.history, user: state.user };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'all_data_' + new Date().toISOString().split('T')[0] + '.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importAllData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.bases && data.flowers) {
+                        state.bases = data.bases;
+                        state.flowers = data.flowers;
+                        state.history = data.history || [];
+                        state.user = data.user || { name: 'Вы', email: '', avatar: null, notifications: { push: true,
+                                email: false } };
+                        saveState();
+                        renderAll();
+                        alert('✅ Данные импортированы');
+                    } else {
+                        alert('❌ Неверный формат');
+                    }
+                } catch (err) { alert('Ошибка: ' + err.message); }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        // ================================================================
+        // 19. КАЛЕНДАРЬ (ИСПРАВЛЕННЫЙ)
+        // ================================================================
+        function getLocalDateStr(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function renderCalendar() {
+            const grid = document.getElementById('calendarGrid');
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            const todayStr = getLocalDateStr(now);
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            let html = '';
+            const weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+            weekdays.forEach(d => html += `<div class="weekday">${d}</div>`);
+
+            const startOffset = (firstDay === 0 ? 6 : firstDay - 1);
+            for (let i = 0; i < startOffset; i++) {
+                html += `<div class="day other-month"></div>`;
+            }
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateObj = new Date(year, month, d);
+                const dateStr = getLocalDateStr(dateObj);
+
+                let hasPlanned = false;
+                let hasDone = false;
+
+                state.flowers.forEach(f => {
+                    if (!isBaseEditable(f.base_id)) return;
+
+                    const nextW = getNextWateringDate(f);
+                    if (getLocalDateStr(nextW) === dateStr) hasPlanned = true;
+
+                    if (f.fertilizing > 0) {
+                        const lastF = new Date(f.last_fertilizing || f.last_watering || Date.now());
+                        const nextF = new Date(lastF);
+                        nextF.setDate(nextF.getDate() + f.fertilizing);
+                        if (getLocalDateStr(nextF) === dateStr) hasPlanned = true;
+                    }
+
+                    if (f.repot_interval > 0 && f.last_repotting) {
+                        const lastR = new Date(f.last_repotting);
+                        const nextR = new Date(lastR);
+                        nextR.setFullYear(nextR.getFullYear() + f.repot_interval);
+                        if (getLocalDateStr(nextR) === dateStr) hasPlanned = true;
+                    }
+                });
+
+                const doneEvents = state.history.filter(h => h.date === dateStr && state.flowers.some(f =>
+                    f.id === h.flower_id && isBaseEditable(f.base_id)
+                ));
+                if (doneEvents.length > 0) hasDone = true;
+
+                // Если событие было запланировано на прошлый день и не выполнено — оно уже перенеслось
+                if (hasPlanned && dateStr < todayStr) {
+                    hasPlanned = false;
+                }
+
+                let dots = '';
+                if (hasPlanned) dots += `<span class="dot orange"></span>`;
+                if (hasDone) dots += `<span class="dot green"></span>`;
+
+                const isToday = dateStr === todayStr;
+                const isSelected = dateStr === state.selectedCalendarDate;
+
+                let dayClass = 'day';
+                if (isToday) dayClass += ' active';
+                if (isSelected) dayClass += ' selected';
+
+                html += `<div class="${dayClass}" onclick="selectCalendarDay('${dateStr}')">
+                    ${d}<div class="dots">${dots}</div>
+                </div>`;
+            }
+
+            grid.innerHTML = html;
+            document.getElementById('calendarHeader').textContent =
+                `${['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'][month]} ${year}`;
+
+            if (state.selectedCalendarDate) {
+                showDayEvents(state.selectedCalendarDate);
+            } else {
+                showDayEvents(todayStr);
+            }
+        }
+
+        function selectCalendarDay(dateStr) {
+            state.selectedCalendarDate = dateStr;
+            renderCalendar();
+        }
+
+        function showDayEvents(dateStr) {
+            const container = document.getElementById('calendarEvents');
+            const events = [];
+
+            state.flowers.forEach(f => {
+                if (!isBaseEditable(f.base_id)) return;
+
+                const nextW = getNextWateringDate(f);
+                if (getLocalDateStr(nextW) === dateStr) {
+                    events.push({ flower: f, type: 'watering', date: dateStr, planned: true });
+                }
+
+                if (f.fertilizing > 0) {
+                    const lastF = new Date(f.last_fertilizing || f.last_watering || Date.now());
+                    const nextF = new Date(lastF);
+                    nextF.setDate(nextF.getDate() + f.fertilizing);
+                    if (getLocalDateStr(nextF) === dateStr) {
+                        events.push({ flower: f, type: 'fertilizing', date: dateStr, planned: true });
+                    }
+                }
+
+                if (f.repot_interval > 0 && f.last_repotting) {
+                    const lastR = new Date(f.last_repotting);
+                    const nextR = new Date(lastR);
+                    nextR.setFullYear(nextR.getFullYear() + f.repot_interval);
+                    if (getLocalDateStr(nextR) === dateStr) {
+                        events.push({ flower: f, type: 'repotting', date: dateStr, planned: true });
+                    }
+                }
+            });
+
+            const doneEvents = state.history.filter(h => h.date === dateStr && state.flowers.some(f =>
+                f.id === h.flower_id && isBaseEditable(f.base_id)
+            ));
+            doneEvents.forEach(h => {
+                const f = getFlower(h.flower_id);
+                if (f) {
+                    events.push({ flower: f, type: h.type, date: h.date, planned: false, notes: h.notes });
+                }
+            });
+
+            events.sort((a, b) => {
+                if (a.planned === b.planned) return 0;
+                return a.planned ? 1 : -1;
+            });
+
+            if (events.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align:center;padding:20px;color:#8aa08a;">
+                        ✨ Нет событий на этот день
+                    </div>
+                `;
+                return;
+            }
+
+            const typeMap = { watering: '💧 Полив', fertilizing: '🧪 Подкормка', repotting: '🔄 Пересадка' };
+            container.innerHTML = events.map(e => {
+                const status = e.planned ? '🟠 Запланировано' : '🟢 Выполнено';
+                return `
+                    <div class="event-plank" onclick="showDetail('${e.flower.id}')">
+                        <div>
+                            <div class="name">${e.flower.name}</div>
+                            <div class="sub">${e.flower.placement || ''} · ${typeMap[e.type] || e.type}</div>
+                        </div>
+                        <span class="badge">${status}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ================================================================
+        // 20. УХОД (ИСПРАВЛЕННЫЙ ДИЗАЙН)
+        // ================================================================
+        function renderCare() {
+            const container = document.getElementById('careList');
+            const range = document.querySelector('#careRange .active')?.dataset.range || 'today';
+            const todayStr = getLocalDateStr(new Date());
+
+            let maxDays = range === 'today' ? 0 : range === 'tomorrow' ? 1 : range === 'week' ? 7 : 30;
+
+            let events = [];
+            state.flowers.forEach(f => {
+                if (!isBaseEditable(f.base_id)) return;
+
+                const daysWater = getDaysUntilWatering(f);
+                if (daysWater >= 0 && daysWater <= maxDays) {
+                    const label = daysWater === 0 ? 'Сегодня' : daysWater === 1 ? 'Завтра' :
+                        `Через ${daysWater} дн.`;
+                    events.push({
+                        flower: f,
+                        days: daysWater,
+                        type: 'watering',
+                        label: label,
+                        action: 'Полить' + (daysWater > 0 ? ' заранее' : ''),
+                        icon: '💧',
+                    });
+                }
+
+                if (f.fertilizing > 0) {
+                    const lastF = new Date(f.last_fertilizing || f.last_watering || Date.now());
+                    const nextF = new Date(lastF);
+                    nextF.setDate(nextF.getDate() + f.fertilizing);
+                    const daysF = Math.floor((nextF - new Date()) / 86400000);
+                    if (daysF >= 0 && daysF <= maxDays) {
+                        const label = daysF === 0 ? 'Сегодня' : daysF === 1 ? 'Завтра' :
+                            `Через ${daysF} дн.`;
+                        events.push({
+                            flower: f,
+                            days: daysF,
+                            type: 'fertilizing',
+                            label: label,
+                            action: 'Подкормить' + (daysF > 0 ? ' заранее' : ''),
+                            icon: '🧪',
+                        });
+                    }
+                }
+            });
+
+            events.sort((a, b) => a.days - b.days);
+
+            if (events.length === 0) {
+                container.innerHTML = `
+                        <div class="empty-state">
+                            <span class="icon-big">🎉</span>
+                            <p>Всё в порядке!</p>
+                            <p style="font-size:14px;color:#8aa08a;">Нет растений, требующих внимания</p>
+                        </div>
+                    `;
+                return;
+            }
+
+            container.innerHTML = events.map(e => {
+                const typeName = e.type === 'watering' ? 'Полив' : 'Подкормка';
+                return `
+                        <div class="card-care">
+                            <div class="avatar">🌿</div>
+                            <div class="info">
+                                <div class="title">${e.flower.name}</div>
+                                <div class="sub">${e.flower.placement || '—'} · ${getBaseDisplayName(getBase(e.flower.base_id))}</div>
+                                <div class="meta">
+                                    <span>${e.icon} ${typeName} (${e.label})</span>
+                                </div>
+                            </div>
+                            <button class="btn btn-sm btn-success action-btn" onclick="doCareAction('${e.flower.id}', '${e.type}')">
+                                ${e.action}
+                            </button>
+                        </div>
+                    `;
+            }).join('');
+        }
+
+        function doCareAction(flowerId, type) {
+            const f = getFlower(flowerId);
+            if (!f) return;
+            if (!isBaseEditable(f.base_id)) {
+                alert('Это чужая база, вы не можете менять данные.');
+                return;
+            }
+            const today = getLocalDateStr(new Date());
+            const actionName = type === 'watering' ? 'Полив' : 'Подкормка';
+            const field = type === 'watering' ? 'last_watering' : 'last_fertilizing';
+
+            if (f[field] === today) {
+                alert(`${actionName} уже отмечен сегодня.`);
+                return;
+            }
+
+            f[field] = today;
+            state.history.push({
+                id: 'hist_' + generateUUID(),
+                flower_id: f.id,
+                date: today,
+                type: type,
+                notes: `${actionName} (из раздела "Уход")`
+            });
+
+            saveState();
+            renderCare();
+            renderAll();
+            alert(`✅ ${actionName} для "${f.name}" отмечен!`);
+        }
+
+        // ================================================================
+        // 21. ПРОФИЛЬ
+        // ================================================================
+        function updateCounts() {
+            document.getElementById('totalBases').textContent = state.bases.length;
+            document.getElementById('totalPlants').textContent = state.flowers.length;
+        }
+
+        function saveProfile() {
+            state.user.name = document.getElementById('profileNameInput').value.trim() || 'Вы';
+            state.user.email = document.getElementById('profileEmailInput').value.trim();
+            state.user.notifications = {
+                push: document.getElementById('notifPush').checked,
+                email: document.getElementById('notifEmail').checked,
+            };
+            saveState();
+            updateAvatarDisplay();
+        }
+
+        function loadProfile() {
+            document.getElementById('profileNameInput').value = state.user.name || 'Вы';
+            document.getElementById('profileEmailInput').value = state.user.email || '';
+            document.getElementById('notifPush').checked = state.user.notifications?.push ?? true;
+            document.getElementById('notifEmail').checked = state.user.notifications?.email ?? false;
+            updateAvatarDisplay();
+        }
+
+        function updateAvatarDisplay() {
+            const letterEl = document.getElementById('avatarLetter');
+            const imgEl = document.getElementById('avatarImage');
+            if (state.user.avatar) {
+                letterEl.style.display = 'none';
+                imgEl.style.display = 'block';
+                imgEl.src = state.user.avatar;
+            } else {
+                letterEl.style.display = 'block';
+                imgEl.style.display = 'none';
+                const name = state.user.name || 'Вы';
+                letterEl.textContent = name.charAt(0).toUpperCase();
+            }
+        }
+
+        function handleAvatarUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    const size = 200;
+                    canvas.width = size;
+                    canvas.height = size;
+                    ctx.drawImage(img, 0, 0, size, size);
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                    state.user.avatar = dataUrl;
+                    saveState();
+                    updateAvatarDisplay();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+            event.target.value = '';
+        }
+
+        // ================================================================
+        // 22. НАВИГАЦИЯ
+        // ================================================================
+        function navigateTo(page) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('page-' + page).classList.add('active');
+            document.querySelectorAll('.bottom-nav .tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.bottom-nav .tab[data-page="${page}"]`).classList.add('active');
+
+            const titles = {
+                plants: 'Растения',
+                garden: 'Мои растения',
+                calendar: 'Календарь',
+                care: 'Уход',
+                profile: 'Профиль'
+            };
+            document.getElementById('pageTitle').textContent = titles[page] || 'PhytoNote';
+            document.getElementById('headerEditBtn').style.display = 'none';
+
+            state.currentPage = page;
+            if (page === 'plants') renderCatalog();
+            else if (page === 'garden') { renderBases(); }
+            else if (page === 'calendar') { renderCalendar(); }
+            else if (page === 'care') renderCare();
+            else if (page === 'profile') {
+                loadProfile();
+                updateCounts();
+            }
+        }
+
+        // ================================================================
+        // 23. ОТЛАДКА
+        // ================================================================
+        function updateDebugInfo() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('ru-RU', { hour12: false });
+            const dateStr = now.toLocaleDateString('ru-RU');
+            document.getElementById('debugTime').textContent = timeStr;
+            document.getElementById('debugDate').textContent = dateStr;
+        }
+        setInterval(updateDebugInfo, 1000);
+        updateDebugInfo();
+
+        // ================================================================
+        // 24. ИНИЦИАЛИЗАЦИЯ
+        // ================================================================
+        document.addEventListener('DOMContentLoaded', function() {
+            loadState();
+
+            document.querySelectorAll('.bottom-nav .tab').forEach(tab => {
+                tab.addEventListener('click', () => navigateTo(tab.dataset.page));
+            });
+
+            document.querySelectorAll('#careRange button').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('#careRange button').forEach(b => b.classList.remove(
+                    'active'));
+                    this.classList.add('active');
+                    renderCare();
+                });
+            });
+
+            document.querySelectorAll('.modal-overlay').forEach(el => {
+                el.addEventListener('click', function(e) {
+                    if (e.target === this) this.classList.remove('show');
+                });
+            });
+
+            loadCatalog();
+            renderAll();
+            loadProfile();
+        });
+
+        function renderAll() {
+            renderCatalog();
+            renderBases();
+            if (state.currentBaseId) renderBasePlants();
+            renderCalendar();
+            renderCare();
+            updateCounts();
+        }
+    </script>
+</body>
+</html>

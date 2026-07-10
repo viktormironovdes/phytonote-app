@@ -34,18 +34,18 @@ jobs:
     - name: Install dependencies
       run: npm install
 
-    - name: Initialize Capacitor and add Android
-      run: |
-        npx cap init "PhytoNote" "com.phytonote.app" --web-dir www
-        npx cap add android
-        # Принудительно обновляем Capacitor, чтобы он создал все нужные файлы
-        npx cap update
-
-    - name: Copy web assets
+    - name: Copy web assets BEFORE Capacitor init
       run: |
         mkdir -p www
         cp -r assets/* www/
         echo "✅ All files copied to www!"
+
+    - name: Initialize Capacitor and add Android
+      run: |
+        npx cap init "PhytoNote" "com.phytonote.app" --web-dir www
+        npx cap add android
+        # Теперь www уже существует, и обновление пройдёт успешно
+        npx cap update
 
     - name: Use custom icon as app icon
       run: |

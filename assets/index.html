@@ -1402,7 +1402,39 @@
         }
 
         // ================================================================
-        // 8. ФУНКЦИИ ДЛЯ ФОТОГРАФИЙ
+        // 8. ИМПОРТ ВСЕХ ДАННЫХ (С УВЕДОМЛЕНИЕМ)
+        // ================================================================
+        function importAllData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.bases && data.flowers) {
+                        state.bases = data.bases;
+                        state.flowers = data.flowers;
+                        state.history = data.history || [];
+                        state.user = data.user || { name: 'Вы', email: '', avatar: null, notifications: { push: true,
+                                email: false } };
+                        saveState();
+                        renderAll();
+                        renderCare();
+                        renderCalendar();
+                        alert('✅ Данные успешно импортированы!');
+                    } else {
+                        alert('❌ Неверный формат файла');
+                    }
+                } catch (err) {
+                    alert('❌ Ошибка чтения файла: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        // ================================================================
+        // 9. ФУНКЦИИ ДЛЯ ФОТОГРАФИЙ
         // ================================================================
         function handleFlowerPhotoUpload(flowerId) {
             const input = document.getElementById('flowerPhotoInput');
@@ -1427,6 +1459,8 @@
                         saveState();
                         renderDetail();
                         renderAll();
+                        renderCare();
+                        renderCalendar();
                         alert('✅ Фото добавлено!');
                     }
                 };
@@ -1437,7 +1471,68 @@
         }
 
         // ================================================================
-        // 9. ПРЕВЬЮ КАТАЛОГА
+        // 10. ДОБАВЛЕНИЕ ИЗ КАТАЛОГА (С ДАТАМИ)
+        // ================================================================
+        function addFromPreview(catalogId) {
+            const select = document.getElementById('previewBaseSelect');
+            const baseId = select ? select.value : null;
+            const placement = document.getElementById('previewPlacement')?.value || '—';
+            const age = parseInt(document.getElementById('previewAge')?.value) || 0;
+            const lastWatering = document.getElementById('previewLastWatering')?.value || new Date().toISOString().split('T')[0];
+            const lastFertilizing = document.getElementById('previewLastFertilizing')?.value || new Date().toISOString().split('T')[0];
+
+            if (!baseId || !getBase(baseId)) { alert('Выберите базу'); return; }
+            const plant = state.catalog.find(p => p.id === catalogId);
+            if (!plant) return;
+
+            const flower = {
+                id: 'flower_' + generateUUID(),
+                catalog_id: plant.id,
+                base_id: baseId,
+                source_type: 'catalog',
+                name: plant.name,
+                placement: placement,
+                ageMonths: age,
+                photo: null,
+                watering_summer: plant.default_watering_summer || 3,
+                watering_winter: plant.default_watering_winter || 7,
+                fertilizing: plant.default_fertilizing || 30,
+                repot_interval: plant.default_repot_interval || 2,
+                light: plant.default_light || 'Рассеянный свет',
+                condition: 'Хорошее',
+                notes: plant.default_soil ? 'Грунт: ' + plant.default_soil : '',
+                last_watering: lastWatering,
+                last_fertilizing: lastFertilizing,
+                last_repotting: new Date().toISOString().split('T')[0],
+                createdAt: new Date().toISOString()
+            };
+            state.flowers.push(flower);
+            state.history.push({
+                id: 'hist_' + generateUUID(),
+                flower_id: flower.id,
+                date: lastWatering,
+                type: 'watering',
+                notes: 'Добавлено из каталога'
+            });
+            if (plant.default_fertilizing > 0) {
+                state.history.push({
+                    id: 'hist_' + generateUUID(),
+                    flower_id: flower.id,
+                    date: lastFertilizing,
+                    type: 'fertilizing',
+                    notes: 'Добавлено из каталога'
+                });
+            }
+            saveState();
+            document.getElementById('previewModal')?.remove();
+            renderAll();
+            renderCare();
+            renderCalendar();
+            alert('✅ ' + plant.name + ' добавлен в базу!');
+        }
+
+        // ================================================================
+        // 11. ПРЕВЬЮ КАТАЛОГА (С ПОЛЯМИ ДАТ)
         // ================================================================
         function showCatalogPreview(catalogId) {
             const plant = state.catalog.find(p => p.id === catalogId);
@@ -1457,6 +1552,8 @@
             const growthForm = plant.growth_forms ? plant.growth_forms.join(', ') : '—';
             const dangerPets = plant.dangerous_pets ? '⚠️ Да' : '✅ Нет';
             const dangerChildren = plant.dangerous_children ? '⚠️ Да' : '✅ Нет';
+
+            const today = new Date().toISOString().split('T')[0];
 
             const overlay = document.createElement('div');
             overlay.className = 'modal-overlay show';
@@ -1495,6 +1592,10 @@
                                 <input id="previewPlacement" placeholder="Кабинет, кухня..." style="width:100%;padding:10px;border-radius:12px;border:1px solid #dce4dc;margin-top:4px;font-size:14px;">
                                 <label style="font-weight:600;margin-top:8px;display:block;">Возраст (месяцев):</label>
                                 <input id="previewAge" type="number" value="0" style="width:100%;padding:10px;border-radius:12px;border:1px solid #dce4dc;margin-top:4px;font-size:14px;">
+                                <label style="font-weight:600;margin-top:8px;display:block;">Дата последнего полива:</label>
+                                <input id="previewLastWatering" type="date" value="${today}" style="width:100%;padding:10px;border-radius:12px;border:1px solid #dce4dc;margin-top:4px;font-size:14px;">
+                                <label style="font-weight:600;margin-top:8px;display:block;">Дата последней подкормки:</label>
+                                <input id="previewLastFertilizing" type="date" value="${today}" style="width:100%;padding:10px;border-radius:12px;border:1px solid #dce4dc;margin-top:4px;font-size:14px;">
                                 <button class="btn" onclick="addFromPreview('${plant.id}')" style="margin-top:12px;">➕ Добавить в базу</button>
                             </div>
                         </div>
@@ -1504,52 +1605,8 @@
             overlay.addEventListener('click', function(e) { if (e.target === this) this.remove(); });
         }
 
-        function addFromPreview(catalogId) {
-            const select = document.getElementById('previewBaseSelect');
-            const baseId = select ? select.value : null;
-            const placement = document.getElementById('previewPlacement')?.value || '—';
-            const age = parseInt(document.getElementById('previewAge')?.value) || 0;
-            if (!baseId || !getBase(baseId)) { alert('Выберите базу'); return; }
-            const plant = state.catalog.find(p => p.id === catalogId);
-            if (!plant) return;
-
-            const flower = {
-                id: 'flower_' + generateUUID(),
-                catalog_id: plant.id,
-                base_id: baseId,
-                source_type: 'catalog',
-                name: plant.name,
-                placement: placement,
-                ageMonths: age,
-                photo: null,
-                watering_summer: plant.default_watering_summer || 3,
-                watering_winter: plant.default_watering_winter || 7,
-                fertilizing: plant.default_fertilizing || 30,
-                repot_interval: plant.default_repot_interval || 2,
-                light: plant.default_light || 'Рассеянный свет',
-                condition: 'Хорошее',
-                notes: plant.default_soil ? 'Грунт: ' + plant.default_soil : '',
-                last_watering: new Date().toISOString().split('T')[0],
-                last_fertilizing: new Date().toISOString().split('T')[0],
-                last_repotting: new Date().toISOString().split('T')[0],
-                createdAt: new Date().toISOString()
-            };
-            state.flowers.push(flower);
-            state.history.push({
-                id: 'hist_' + generateUUID(),
-                flower_id: flower.id,
-                date: new Date().toISOString().split('T')[0],
-                type: 'watering',
-                notes: 'Добавлено из каталога'
-            });
-            saveState();
-            document.getElementById('previewModal')?.remove();
-            renderAll();
-            alert('✅ ' + plant.name + ' добавлен в базу!');
-        }
-
         // ================================================================
-        // 10. БАЗЫ
+        // 12. БАЗЫ
         // ================================================================
         function renderBases() {
             const container = document.getElementById('basesContainer');
@@ -1663,7 +1720,7 @@
         }
 
         // ================================================================
-        // 11. УПРАВЛЕНИЕ БАЗАМИ
+        // 13. УПРАВЛЕНИЕ БАЗАМИ
         // ================================================================
         function deleteCurrentBase() {
             const base = getBase(state.currentBaseId);
@@ -1678,6 +1735,8 @@
             saveState();
             backToBases();
             renderAll();
+            renderCare();
+            renderCalendar();
             alert('✅ База удалена');
         }
 
@@ -1694,11 +1753,13 @@
             saveState();
             backToBases();
             renderAll();
+            renderCare();
+            renderCalendar();
             alert('✅ Вы отключились от базы');
         }
 
         // ================================================================
-        // 12. СОЗДАНИЕ БАЗЫ
+        // 14. СОЗДАНИЕ БАЗЫ
         // ================================================================
         let selectedIcon = '🏠';
 
@@ -1738,6 +1799,8 @@
             saveState();
             closeCreateBaseModal();
             renderAll();
+            renderCare();
+            renderCalendar();
         }
 
         function editBaseName() {
@@ -1759,7 +1822,7 @@
         }
 
         // ================================================================
-        // 13. РАСТЕНИЯ (Добавление/Редактирование)
+        // 15. РАСТЕНИЯ (Добавление/Редактирование)
         // ================================================================
         function showAddPlantModal(editId) {
             if (!isBaseEditable(state.currentBaseId)) {
@@ -1846,10 +1909,12 @@
             saveState();
             closePlantModal();
             renderAll();
+            renderCare();
+            renderCalendar();
         }
 
         // ================================================================
-        // 14. ДЕТАЛЬНЫЙ ПРОСМОТР (ФОТО НА ВСЮ ШИРИНУ)
+        // 16. ДЕТАЛЬНЫЙ ПРОСМОТР
         // ================================================================
         function showDetail(flowerId) {
             state.detailFlowerId = flowerId;
@@ -1884,7 +1949,6 @@
 
             document.getElementById('detailTitle').textContent = '🌿 ' + f.name;
 
-            // ФОТО НА ВСЮ ШИРИНУ
             const photoHtml = `
                     <div class="detail-header">
                         <div class="photo-container" onclick="document.getElementById('flowerPhotoInput').click()">
@@ -2028,6 +2092,8 @@
             saveState();
             renderDetail();
             renderAll();
+            renderCare();
+            renderCalendar();
             alert('✅ Настройки сброшены к рекомендуемым!');
         }
 
@@ -2067,6 +2133,8 @@
             document.getElementById('detailEditBtn').textContent = '✏️';
             renderDetail();
             renderAll();
+            renderCare();
+            renderCalendar();
         }
 
         function closeDetailModal() {
@@ -2076,7 +2144,7 @@
         }
 
         // ================================================================
-        // 15. ЧУЖАЯ БАЗА (ТОЛЬКО ПРОСМОТР)
+        // 17. ЧУЖАЯ БАЗА (ТОЛЬКО ПРОСМОТР)
         // ================================================================
         function showReadOnlyDetail(flowerId) {
             state.detailFlowerId = flowerId;
@@ -2087,7 +2155,7 @@
         }
 
         // ================================================================
-        // 16. ДЕЙСТВИЯ В КАРТОЧКЕ (ОБНОВЛЕНИЕ УХОДА И КАЛЕНДАРЯ)
+        // 18. ДЕЙСТВИЯ В КАРТОЧКЕ
         // ================================================================
         function detailWaterNow() {
             const f = getFlower(state.detailFlowerId);
@@ -2100,9 +2168,9 @@
             saveState();
             renderDetail();
             renderAll();
-            // ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ УХОД И КАЛЕНДАРЬ
             renderCare();
             renderCalendar();
+            alert('✅ Полив отмечен!');
         }
 
         function detailFertilizeNow() {
@@ -2118,6 +2186,7 @@
             renderAll();
             renderCare();
             renderCalendar();
+            alert('✅ Подкормка отмечена!');
         }
 
         function resetFlowerHistory() {
@@ -2131,6 +2200,7 @@
             renderAll();
             renderCare();
             renderCalendar();
+            alert('✅ История сброшена');
         }
 
         function deleteFlower() {
@@ -2145,10 +2215,11 @@
             renderAll();
             renderCare();
             renderCalendar();
+            alert('✅ Растение удалено');
         }
 
         // ================================================================
-        // 17. КЛОНИРОВАНИЕ
+        // 19. КЛОНИРОВАНИЕ
         // ================================================================
         function showCloneModal() {
             const myBases = state.bases.filter(b => b.owner === 'Вы');
@@ -2201,7 +2272,7 @@
         }
 
         // ================================================================
-        // 18. ЭКСПОРТ/ИМПОРТ БАЗ
+        // 20. ЭКСПОРТ/ИМПОРТ БАЗ
         // ================================================================
         function showExportBaseModal() {
             if (state.bases.length === 0) { alert('Нет баз для экспорта'); return; }
@@ -2263,6 +2334,8 @@
                     });
                     saveState();
                     renderAll();
+                    renderCare();
+                    renderCalendar();
                     alert('✅ База импортирована');
                 } catch (err) { alert('Ошибка: ' + err.message); }
             };
@@ -2271,7 +2344,7 @@
         }
 
         // ================================================================
-        // 19. ЭКСПОРТ/ИМПОРТ ВСЕХ ДАННЫХ
+        // 21. ЭКСПОРТ/ИМПОРТ ВСЕХ ДАННЫХ
         // ================================================================
         function exportAllData() {
             const data = { bases: state.bases, flowers: state.flowers, history: state.history, user: state.user };
@@ -2284,33 +2357,8 @@
             URL.revokeObjectURL(url);
         }
 
-        function importAllData(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    if (data.bases && data.flowers) {
-                        state.bases = data.bases;
-                        state.flowers = data.flowers;
-                        state.history = data.history || [];
-                        state.user = data.user || { name: 'Вы', email: '', avatar: null, notifications: { push: true,
-                                email: false } };
-                        saveState();
-                        renderAll();
-                        alert('✅ Данные импортированы');
-                    } else {
-                        alert('❌ Неверный формат');
-                    }
-                } catch (err) { alert('Ошибка: ' + err.message); }
-            };
-            reader.readAsText(file);
-            event.target.value = '';
-        }
-
         // ================================================================
-        // 20. КАЛЕНДАРЬ
+        // 22. КАЛЕНДАРЬ
         // ================================================================
         function getLocalDateStr(date) {
             const year = date.getFullYear();
@@ -2502,7 +2550,7 @@
         }
 
         // ================================================================
-        // 21. УХОД (ОБНОВЛЕНИЕ ПОСЛЕ ИЗМЕНЕНИЙ)
+        // 23. УХОД (ИСПРАВЛЕННАЯ ЛОГИКА)
         // ================================================================
         function renderCare() {
             const container = document.getElementById('careList');
@@ -2616,7 +2664,7 @@
         }
 
         // ================================================================
-        // 22. ПРОФИЛЬ
+        // 24. ПРОФИЛЬ
         // ================================================================
         function updateCounts() {
             document.getElementById('totalBases').textContent = state.bases.length;
@@ -2682,7 +2730,7 @@
         }
 
         // ================================================================
-        // 23. НАВИГАЦИЯ
+        // 25. НАВИГАЦИЯ
         // ================================================================
         function navigateTo(page) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -2712,7 +2760,7 @@
         }
 
         // ================================================================
-        // 24. ОТЛАДКА
+        // 26. ОТЛАДКА
         // ================================================================
         function updateDebugInfo() {
             const now = new Date();
@@ -2725,7 +2773,7 @@
         updateDebugInfo();
 
         // ================================================================
-        // 25. ИНИЦИАЛИЗАЦИЯ
+        // 27. ИНИЦИАЛИЗАЦИЯ
         // ================================================================
         document.addEventListener('DOMContentLoaded', function() {
             loadState();

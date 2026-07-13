@@ -92,14 +92,14 @@
             background: #f8fbf8;
         }
         .card .avatar {
-            width: 48px;
-            height: 48px;
+            width: 64px;
+            height: 64px;
             border-radius: 12px;
             background: #e4ece4;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 26px;
+            font-size: 28px;
             flex-shrink: 0;
             overflow: hidden;
         }
@@ -167,14 +167,14 @@
             cursor: default;
         }
         .card-care .avatar {
-            width: 48px;
-            height: 48px;
+            width: 64px;
+            height: 64px;
             border-radius: 12px;
             background: #e4ece4;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 26px;
+            font-size: 28px;
             flex-shrink: 0;
             overflow: hidden;
         }
@@ -562,49 +562,64 @@
         }
 
         /* ================================================================
-           ДЕТАЛЬНЫЙ ПРОСМОТР
+           ДЕТАЛЬНЫЙ ПРОСМОТР (ФОТО НА ВСЮ ШИРИНУ)
            ================================================================ */
-        .detail-avatar {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
+        .detail-header {
+            margin: -20px -20px 16px -20px;
+            border-radius: 24px 24px 0 0;
+            overflow: hidden;
             background: #e4ece4;
+            position: relative;
+        }
+        .detail-header .photo-container {
+            width: 100%;
+            max-height: 200px;
+            overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 36px;
-            font-weight: 700;
-            color: #2d5a2d;
-            margin: 0 auto 12px auto;
-            overflow: hidden;
+            background: #e4ece4;
             cursor: pointer;
-            border: 2px solid #dce4dc;
-            transition: 0.2s;
             position: relative;
         }
-        .detail-avatar:hover {
-            border-color: #1e3a1e;
-        }
-        .detail-avatar img {
+        .detail-header .photo-container img {
             width: 100%;
-            height: 100%;
+            height: auto;
+            max-height: 200px;
             object-fit: cover;
         }
-        .detail-avatar .photo-hint {
+        .detail-header .photo-container .no-photo {
+            width: 100%;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            color: #8aa08a;
+            background: #e4ece4;
+        }
+        .detail-header .photo-hint {
             position: absolute;
             bottom: 0;
             left: 0;
             right: 0;
-            background: rgba(0,0,0,0.6);
+            background: rgba(0,0,0,0.5);
             color: white;
-            font-size: 10px;
-            padding: 2px 0;
+            font-size: 12px;
+            padding: 6px 0;
             text-align: center;
             opacity: 0;
             transition: opacity 0.3s;
         }
-        .detail-avatar:hover .photo-hint {
+        .detail-header .photo-container:hover .photo-hint {
             opacity: 1;
+        }
+        .detail-header .plant-name {
+            padding: 12px 20px 16px 20px;
+            text-align: center;
+            font-size: 22px;
+            font-weight: 700;
+            color: #1a2e1a;
         }
         .detail-field {
             display: flex;
@@ -1398,10 +1413,9 @@
             reader.onload = function(e) {
                 const img = new Image();
                 img.onload = function() {
-                    // Сжатие до 200x200
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
-                    const size = 200;
+                    const size = 600;
                     canvas.width = size;
                     canvas.height = size;
                     ctx.drawImage(img, 0, 0, size, size);
@@ -1619,6 +1633,8 @@
             const search = document.getElementById('gardenSearch').value.toLowerCase();
             const isEditable = isBaseEditable(state.currentBaseId);
             let list = getFlowersByBase(state.currentBaseId).filter(f => f.name.toLowerCase().includes(search));
+            // СОРТИРОВКА ПО ИМЕНИ
+            list.sort((a, b) => a.name.localeCompare(b.name));
             container.innerHTML = list.map(f => {
                 const status = getWateringStatus(f);
                 const days = getDaysUntilWatering(f);
@@ -1833,7 +1849,7 @@
         }
 
         // ================================================================
-        // 14. ДЕТАЛЬНЫЙ ПРОСМОТР
+        // 14. ДЕТАЛЬНЫЙ ПРОСМОТР (ФОТО НА ВСЮ ШИРИНУ)
         // ================================================================
         function showDetail(flowerId) {
             state.detailFlowerId = flowerId;
@@ -1868,15 +1884,20 @@
 
             document.getElementById('detailTitle').textContent = '🌿 ' + f.name;
 
-            let bodyHtml = `
-                    <div style="text-align:center; margin-bottom:12px;">
-                        <div class="detail-avatar" onclick="document.getElementById('flowerPhotoInput').click()">
-                            ${f.photo ? `<img src="${f.photo}" alt="${f.name}">` : `<span>🌿</span>`}
+            // ФОТО НА ВСЮ ШИРИНУ
+            const photoHtml = `
+                    <div class="detail-header">
+                        <div class="photo-container" onclick="document.getElementById('flowerPhotoInput').click()">
+                            ${f.photo ? `<img src="${f.photo}" alt="${f.name}">` : `<div class="no-photo">🌿</div>`}
                             <div class="photo-hint">Нажмите, чтобы добавить фото</div>
                             <input type="file" id="flowerPhotoInput" accept="image/*" style="display:none" onchange="handleFlowerPhotoUpload('${f.id}')">
                         </div>
-                        <div style="font-size:18px;font-weight:700;">${f.name}</div>
+                        <div class="plant-name">${f.name}</div>
                     </div>
+                `;
+
+            let bodyHtml = `
+                    ${photoHtml}
                     <div class="detail-card">
                         <div class="detail-field">
                             <span class="label">📍 База</span>
@@ -2066,7 +2087,7 @@
         }
 
         // ================================================================
-        // 16. ДЕЙСТВИЯ В КАРТОЧКЕ
+        // 16. ДЕЙСТВИЯ В КАРТОЧКЕ (ОБНОВЛЕНИЕ УХОДА И КАЛЕНДАРЯ)
         // ================================================================
         function detailWaterNow() {
             const f = getFlower(state.detailFlowerId);
@@ -2079,6 +2100,9 @@
             saveState();
             renderDetail();
             renderAll();
+            // ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ УХОД И КАЛЕНДАРЬ
+            renderCare();
+            renderCalendar();
         }
 
         function detailFertilizeNow() {
@@ -2092,6 +2116,8 @@
             saveState();
             renderDetail();
             renderAll();
+            renderCare();
+            renderCalendar();
         }
 
         function resetFlowerHistory() {
@@ -2103,6 +2129,8 @@
             saveState();
             renderDetail();
             renderAll();
+            renderCare();
+            renderCalendar();
         }
 
         function deleteFlower() {
@@ -2115,6 +2143,8 @@
             saveState();
             closeDetailModal();
             renderAll();
+            renderCare();
+            renderCalendar();
         }
 
         // ================================================================
@@ -2146,7 +2176,7 @@
                 name: original.name + ' (клон)',
                 placement: original.placement || '—',
                 ageMonths: original.ageMonths || 0,
-                photo: null, // Фото не копируется
+                photo: null,
                 watering_summer: original.watering_summer,
                 watering_winter: original.watering_winter,
                 fertilizing: original.fertilizing,
@@ -2165,6 +2195,8 @@
             saveState();
             closeCloneModal();
             renderAll();
+            renderCare();
+            renderCalendar();
             alert('✅ Клон создан');
         }
 
@@ -2470,7 +2502,7 @@
         }
 
         // ================================================================
-        // 21. УХОД
+        // 21. УХОД (ОБНОВЛЕНИЕ ПОСЛЕ ИЗМЕНЕНИЙ)
         // ================================================================
         function renderCare() {
             const container = document.getElementById('careList');
@@ -2579,6 +2611,7 @@
             saveState();
             renderCare();
             renderAll();
+            renderCalendar();
             alert(`✅ ${actionName} для "${f.name}" отмечен!`);
         }
 

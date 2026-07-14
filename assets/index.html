@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PhytoNote 🌿</title>
+    
+    <!-- ================================================================
+    PWA (Progressive Web App)
+    ================================================================ -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1e3a1e">
+    <meta name="description" content="Приложение для ухода за растениями">
+    
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- ================================================================
+    ШАПКА
+    ================================================================ -->
+    <header class="app-header">
+        <h1 id="pageTitle">Уход</h1>
+        <div class="header-actions">
+            <button id="headerEditBtn" style="display:none;" onclick="toggleEditMode()">✏️</button>
+        </div>
+    </header>
+
+    <!-- ================================================================
+    СТРАНИЦЫ
+    ================================================================ -->
+
+    <!-- 1. РАСТЕНИЯ (Каталог) -->
+    <div class="page" id="page-plants">
+        <div class="filter-group">
+            <select id="filterGrowth" onchange="renderCatalog()">
+                <option value="all">Все формы роста</option>
+                <option value="Деревья и кустарники">🌳 Деревья и кустарники</option>
+                <option value="Лианы и ампельные">🌿 Лианы и ампельные</option>
+                <option value="Розеточные">🌱 Розеточные</option>
+                <option value="Прямостоячие травянистые">🌾 Прямостоячие</option>
+                <option value="Суккуленты">🌵 Суккуленты</option>
+            </select>
+            <select id="filterLight" onchange="renderCatalog()">
+                <option value="all">Любой свет</option>
+                <option value="Яркий свет">☀️ Яркий свет</option>
+                <option value="Рассеянный свет">🌤 Рассеянный</option>
+                <option value="Полутень">🌥 Полутень</option>
+                <option value="Тень">🌑 Тень</option>
+            </select>
+            <select id="filterSafety" onchange="renderCatalog()">
+                <option value="all">Все растения</option>
+                <option value="safe_pets">🐾 Безопасно для животных</option>
+                <option value="safe_children">👶 Безопасно для детей</option>
+                <option value="safe_all">🐾👶 Безопасно для всех</option>
+            </select>
+        </div>
+        <input class="search-bar" id="plantsSearch" placeholder="🔍 Поиск в каталоге..." oninput="renderCatalog()">
+        <div id="catalogList"></div>
+    </div>
+
+    <!-- 2. КОЛЛЕКЦИИ -->
+    <div class="page" id="page-garden">
+        <div id="gardenView">
+            <div id="basesList">
+                <button class="btn" onclick="showCreateBaseModal()">➕ Создать коллекцию</button>
+                <div id="basesContainer" style="margin-top:10px;"></div>
+                <div style="margin-top:16px; display:flex; gap:8px; flex-wrap:wrap;">
+                    <button class="btn btn-outline" style="flex:1;" onclick="showExportBaseModal()">📤 Экспорт коллекции</button>
+                    <button class="btn btn-outline" style="flex:1;" onclick="document.getElementById('importBaseInput').click()">📥 Импорт коллекции</button>
+                    <input type="file" id="importBaseInput" accept=".json" style="display:none" onchange="importBase(event)">
+                </div>
+            </div>
+            <div id="basePlantsView" style="display:none;">
+                <button class="btn btn-outline" onclick="backToBases()" style="margin-bottom:10px;">← Назад к коллекциям</button>
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                    <span id="currentBaseIcon" style="font-size:28px;">🏠</span>
+                    <h3 id="currentBaseTitle" style="flex:1;">Моя коллекция</h3>
+                    <span id="currentBaseOwner" style="font-size:13px;color:#5c725c;"></span>
+                    <button class="btn btn-sm btn-outline" id="editBaseNameBtn" onclick="editBaseName()">✏️</button>
+                </div>
+                <input class="search-bar" id="gardenSearch" placeholder="🔍 Поиск в коллекции..." oninput="renderBasePlants()">
+                <div id="basePlantsList"></div>
+                <button class="btn" id="addPlantBtn" onclick="showAddPlantModal()" style="margin-top:10px;">➕ Добавить растение</button>
+                <div class="base-management" id="baseManagement" style="margin-top:16px;border-top:1px solid #eef3ee;padding-top:12px;">
+                    <div class="title">Управление коллекцией</div>
+                    <button class="btn btn-danger" id="deleteBaseBtn" onclick="deleteCurrentBase()">🗑 Удалить коллекцию</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. УХОД -->
+    <div class="page active" id="page-care">
+        <div class="filter-tabs" id="careRange">
+            <button class="active" data-range="today">Сегодня</button>
+            <button data-range="tomorrow">Завтра</button>
+            <button data-range="week">Неделя</button>
+        </div>
+        <div id="careList"></div>
+    </div>
+
+    <!-- 4. КАЛЕНДАРЬ -->
+    <div class="page" id="page-calendar">
+        <div id="calendarHeader" style="font-weight:600;font-size:18px;margin-bottom:6px;">Июль 2026</div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+        <div style="margin-top:12px;font-size:13px;color:#5c725c;">
+            <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#e8b830;vertical-align:middle;margin-right:6px;"></span> Запланировано
+            <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#3a9e3a;vertical-align:middle;margin-left:16px;margin-right:6px;"></span> Выполнено
+        </div>
+        <div id="calendarEvents" style="margin-top:14px;"></div>
+    </div>
+
+    <!-- 5. ПРОФИЛЬ -->
+    <div class="page" id="page-profile">
+        <div class="profile-avatar" id="profileAvatar" onclick="document.getElementById('avatarInput').click()">
+            <span id="avatarLetter">В</span>
+            <img id="avatarImage" style="display:none;" alt="Аватар">
+            <input type="file" id="avatarInput" accept="image/*" onchange="handleAvatarUpload(event)">
+        </div>
+        <div style="text-align:center;font-size:13px;color:#5c725c;margin-bottom:12px;">Нажмите на аватар, чтобы изменить</div>
+
+        <div class="profile-item">
+            <span class="label">👤 Имя</span>
+            <input type="text" id="profileNameInput" value="Вы" onchange="saveProfile()">
+        </div>
+        <div class="profile-item">
+            <span class="label">📧 Почта</span>
+            <input type="email" id="profileEmailInput" value="" placeholder="email@example.com" onchange="saveProfile()">
+        </div>
+        <div class="profile-item">
+            <span class="label">📁 Всего коллекций</span>
+            <span class="value" id="totalBases">0</span>
+        </div>
+        <div class="profile-item">
+            <span class="label">🌱 Всего растений</span>
+            <span class="value" id="totalPlants">0</span>
+        </div>
+
+        <!-- НАСТРОЙКИ ОТОБРАЖЕНИЯ -->
+        <div style="margin-top:16px;">
+            <div style="font-weight:600;margin-bottom:6px;">⚙️ Настройки карточки растения</div>
+            <button class="btn btn-outline" onclick="showDisplaySettingsModal()">⚙️ Настройка карточки растения</button>
+        </div>
+
+        <div style="margin-top:16px;">
+            <div style="font-weight:600;margin-bottom:6px;">📚 Управление каталогом</div>
+            <div class="profile-item">
+                <span class="label">📊 Статус</span>
+                <span class="value" id="catalogStatus">Не загружен</span>
+            </div>
+            <button class="btn btn-outline" onclick="document.getElementById('importCatalogInput').click()">📥 Импортировать каталог</button>
+            <input type="file" id="importCatalogInput" accept=".json" style="display:none" onchange="importCatalog(event)">
+            <button class="btn btn-outline" onclick="exportCatalog()">📤 Экспортировать каталог</button>
+            <button class="btn btn-danger" onclick="clearCatalog()">🗑 Очистить каталог</button>
+        </div>
+        <div style="margin-top:16px;">
+            <div style="font-weight:600;margin-bottom:6px;">🔔 Уведомления</div>
+            <div class="profile-item">
+                <span class="label">📱 Push-уведомления</span>
+                <input type="checkbox" id="notifPush" onchange="saveProfile()">
+            </div>
+            <div class="profile-item">
+                <span class="label">📧 На почту</span>
+                <input type="checkbox" id="notifEmail" onchange="saveProfile()">
+            </div>
+        </div>
+        <div style="margin-top:16px;">
+            <button class="btn btn-outline" onclick="exportAllData()">📤 Экспорт всех данных</button>
+            <button class="btn btn-outline" onclick="document.getElementById('importAllInput').click()">📥 Импорт всех данных</button>
+            <input type="file" id="importAllInput" accept=".json" style="display:none" onchange="importAllData(event)">
+            <button class="btn btn-danger" onclick="if(confirm('Удалить ВСЕ данные?')){localStorage.clear();location.reload();}">🗑 Сбросить все данные</button>
+        </div>
+        <div class="coming-soon" style="margin-top:20px;border-top:1px solid #eef3ee;padding-top:16px;">
+            <span class="icon-big">🚀</span>
+            <p style="font-weight:500;">Многопользовательский режим</p>
+            <p style="font-size:13px;color:#8aa08a;">Скоро: общие коллекции, синхронизация, приглашения</p>
+            <button class="btn btn-outline" style="margin-top:8px;max-width:200px;margin-left:auto;margin-right:auto;" onclick="alert('🚀 В разработке!')">🔒 Управление коллекциями</button>
+        </div>
+
+        <!-- Отладочная информация -->
+        <div class="debug-info">
+            <div>🕒 Текущее время:</div>
+            <div class="time" id="debugTime">--:--:--</div>
+            <div style="margin-top:4px;font-size:12px;color:#8aa08a;" id="debugDate">--</div>
+            <button class="btn btn-sm btn-outline log-btn" onclick="exportLogs()">📋 Скачать логи</button>
+        </div>
+    </div>
+
+    <!-- ================================================================
+    НИЖНЕЕ МЕНЮ
+    ================================================================ -->
+    <nav class="bottom-nav">
+        <button class="tab" data-page="plants"><span class="icon">🌿</span>Растения</button>
+        <button class="tab" data-page="garden"><span class="icon">🌱</span>Коллекции</button>
+        <button class="tab active" data-page="care"><span class="icon">💚</span>Уход</button>
+        <button class="tab" data-page="calendar"><span class="icon">📅</span>Календарь</button>
+        <button class="tab" data-page="profile"><span class="icon">👤</span>Профиль</button>
+    </nav>
+
+    <!-- ================================================================
+    МОДАЛЬНЫЕ ОКНА
+    ================================================================ -->
+
+    <!-- Создание коллекции -->
+    <div class="modal-overlay" id="createBaseModal">
+        <div class="modal-content">
+            <h2>➕ Новая коллекция</h2>
+            <div class="modal-scroll">
+                <label>Название *</label>
+                <input id="baseNameInput" placeholder="Например: Моя коллекция">
+                <label>Иконка</label>
+                <div class="icon-list" id="iconSelector">
+                    <button data-icon="🏠">🏠</button>
+                    <button data-icon="🏢">🏢</button>
+                    <button data-icon="🌳">🌳</button>
+                    <button data-icon="🏡">🏡</button>
+                    <button data-icon="🌿">🌿</button>
+                    <button data-icon="🌸">🌸</button>
+                    <button data-icon="🌺">🌺</button>
+                    <button data-icon="🌴">🌴</button>
+                    <button data-icon="🍀">🍀</button>
+                    <button data-icon="🌵">🌵</button>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeCreateBaseModal()">Отмена</button>
+                <button class="btn-save" onclick="createBase()">Создать</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Добавление/редактирование растения -->
+    <div class="modal-overlay" id="plantModal">
+        <div class="modal-content">
+            <h2 id="plantModalTitle">➕ Новое растение</h2>
+            <div class="modal-scroll">
+                <input type="hidden" id="editFlowerId">
+
+                <label>Название *</label>
+                <input id="fName" placeholder="Название">
+
+                <label>📚 Латинское название</label>
+                <input id="fLatinName" placeholder="Monstera deliciosa">
+
+                <label>🌱 Дата посадки (месяц-год)</label>
+                <input id="fPlantingDate" type="month">
+
+                <label>📍 Расположение</label>
+                <input id="fPlacement" placeholder="Гостиная, кухня..." list="locationSuggestions">
+                <datalist id="locationSuggestions"></datalist>
+
+                <label>☀️ Освещённость</label>
+                <select id="fLight">
+                    <option value="Яркий свет">☀️ Яркий свет</option>
+                    <option value="Рассеянный свет" selected>🌤 Рассеянный</option>
+                    <option value="Полутень">🌥 Полутень</option>
+                    <option value="Тень">🌑 Тень</option>
+                </select>
+
+                <label>💚 Состояние</label>
+                <select id="fCondition">
+                    <option value="Отличное">💚 Отличное</option>
+                    <option value="Хорошее" selected>💛 Хорошее</option>
+                    <option value="Удовлетворительное">🧡 Удовл.</option>
+                    <option value="Плохое">❤️ Плохое</option>
+                </select>
+
+                <!-- РАСШИРЕННЫЕ ПАРАМЕТРЫ -->
+                <div style="margin-top:16px;border-top:1px solid #eef3ee;padding-top:12px;">
+                    <label style="font-weight:600;color:#1e2e1e;">🔧 Расширенные параметры</label>
+
+                    <label>💧 Полив (лето) дни</label>
+                    <input id="fWaterSummer" type="number" min="1" value="3">
+
+                    <label>💧 Полив (зима) дни</label>
+                    <input id="fWaterWinter" type="number" min="1" value="7">
+
+                    <label>🧪 Интервал подкормки (дни, 0 = нет)</label>
+                    <input id="fFert" type="number" min="0" value="30">
+
+                    <label>📅 Период подкормки (с какого месяца)</label>
+                    <select id="fFertStart">
+                        <option value="1">Январь</option><option value="2">Февраль</option>
+                        <option value="3" selected>Март</option><option value="4">Апрель</option>
+                        <option value="5">Май</option><option value="6">Июнь</option>
+                        <option value="7">Июль</option><option value="8">Август</option>
+                        <option value="9">Сентябрь</option><option value="10" selected>Октябрь</option>
+                        <option value="11">Ноябрь</option><option value="12">Декабрь</option>
+                    </select>
+
+                    <label>📅 Период подкормки (по какой месяц)</label>
+                    <select id="fFertEnd">
+                        <option value="1">Январь</option><option value="2">Февраль</option>
+                        <option value="3">Март</option><option value="4">Апрель</option>
+                        <option value="5">Май</option><option value="6">Июнь</option>
+                        <option value="7">Июль</option><option value="8">Август</option>
+                        <option value="9">Сентябрь</option><option value="10" selected>Октябрь</option>
+                        <option value="11">Ноябрь</option><option value="12">Декабрь</option>
+                    </select>
+
+                    <label>🔄 Пересадка (годы)</label>
+                    <input id="fRepot" type="number" min="1" value="2">
+
+                    <label>📅 Дата последней пересадки</label>
+                    <input id="fLastRepotting" type="date">
+
+                    <label>📖 Справка о растении</label>
+                    <textarea id="fCareInfo" placeholder="Историческая справка, родина, селекция..."></textarea>
+
+                    <label>📝 Примечания</label>
+                    <textarea id="fNotes" placeholder="Любит опрыскивание..."></textarea>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closePlantModal()">Отмена</button>
+                <button class="btn-save" onclick="saveFlower()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Детальный просмотр -->
+    <div class="modal-overlay" id="detailModal">
+        <div class="modal-content" style="padding: 0 0 10px 0;">
+            <div id="detailBody" class="modal-scroll"></div>
+            <button class="btn btn-outline" style="margin: 8px 20px 10px 20px; width: calc(100% - 40px); flex-shrink: 0;" onclick="closeDetailModal()">Закрыть</button>
+        </div>
+    </div>
+
+    <!-- Модалка для подробного ухода (в каталоге) -->
+    <div class="modal-overlay" id="careModal">
+        <div class="modal-content">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding: 20px 20px 0 20px; flex-shrink:0;">
+                <h2 style="margin:0;">📖 Подробный уход</h2>
+                <button class="edit-toggle" onclick="document.getElementById('careModal').classList.remove('show')">✕</button>
+            </div>
+            <div class="modal-scroll">
+                <div id="careContent" class="care-guide" style="margin: 0 20px;"></div>
+            </div>
+            <button class="btn btn-outline" style="margin: 12px 20px 0 20px; width: calc(100% - 40px); flex-shrink:0;" onclick="document.getElementById('careModal').classList.remove('show')">Закрыть</button>
+        </div>
+    </div>
+
+    <!-- Настройки отображения -->
+    <div class="modal-overlay" id="displaySettingsModal">
+        <div class="modal-content">
+            <h2>⚙️ Настройка карточки растения</h2>
+            <div class="modal-scroll">
+                <div style="padding: 0 20px;">
+                    <p style="font-size:14px;color:#5c725c;margin-bottom:12px;">Выберите параметры, которые будут всегда видны в карточке</p>
+                    <p style="font-size:13px;color:#8aa08a;margin-bottom:12px;">Остальные параметры можно будет развернуть кнопкой «Развернуть все параметры»</p>
+                </div>
+                <div class="settings-group" style="margin:0 20px;">
+                    <div class="setting-item">
+                        <span>📍 Расположение</span>
+                        <input type="checkbox" id="settingsPlacement" onchange="saveDisplaySettings()">
+                    </div>
+                    <div class="setting-item">
+                        <span>💚 Состояние</span>
+                        <input type="checkbox" id="settingsCondition" onchange="saveDisplaySettings()">
+                    </div>
+                    <div class="setting-item">
+                        <span>☀️ Освещённость</span>
+                        <input type="checkbox" id="settingsLight" onchange="saveDisplaySettings()">
+                    </div>
+                    <div class="setting-item">
+                        <span>💧 Полив</span>
+                        <input type="checkbox" id="settingsWatering" onchange="saveDisplaySettings()">
+                    </div>
+                    <div class="setting-item">
+                        <span>🧪 Подкормка</span>
+                        <input type="checkbox" id="settingsFertilizing" onchange="saveDisplaySettings()">
+                    </div>
+                    <div class="setting-item">
+                        <span>📚 Латинское название</span>
+                        <input type="checkbox" id="settingsLatinName" onchange="saveDisplaySettings()">
+                    </div>
+                    <div class="setting-item">
+                        <span>🌱 Дата посадки / Возраст</span>
+                        <input type="checkbox" id="settingsPlantingDate" onchange="saveDisplaySettings()">
+                    </div>
+                    <div class="setting-item">
+                        <span>🧪 Период подкормки</span>
+                        <input type="checkbox" id="settingsFertilizingPeriod" onchange="saveDisplaySettings()">
+                    </div>
+                    <div class="setting-item">
+                        <span>📅 Последняя пересадка</span>
+                        <input type="checkbox" id="settingsLastRepotting" onchange="saveDisplaySettings()">
+                    </div>
+                    <div class="setting-item">
+                        <span>📝 Примечания</span>
+                        <input type="checkbox" id="settingsNotes" onchange="saveDisplaySettings()">
+                    </div>
+                    <div class="setting-item">
+                        <span>📖 Справка о растении</span>
+                        <input type="checkbox" id="settingsCareInfo" onchange="saveDisplaySettings()">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeDisplaySettingsModal()">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Клонирование -->
+    <div class="modal-overlay" id="cloneModal">
+        <div class="modal-content">
+            <h2>📋 Клонировать в коллекцию</h2>
+            <div class="modal-scroll">
+                <label>Выберите коллекцию</label>
+                <select id="cloneBaseSelect"></select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeCloneModal()">Отмена</button>
+                <button class="btn-save" onclick="executeClone()">Клонировать</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Экспорт коллекции -->
+    <div class="modal-overlay" id="exportBaseModal">
+        <div class="modal-content">
+            <h2>📤 Экспорт коллекции</h2>
+            <div class="modal-scroll">
+                <label>Выберите коллекцию для экспорта</label>
+                <select id="exportBaseSelect"></select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeExportBaseModal()">Отмена</button>
+                <button class="btn-save" onclick="executeExportBase()">Экспортировать</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================================
+    СКРИПТЫ (подключаем модули)
+    ================================================================ -->
+    <script src="js/utils.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/calendar.js"></script>
+    <script src="js/care.js"></script>
+    <script src="js/catalog.js"></script>
+    <script src="js/collections.js"></script>
+    <script src="js/flower.js"></script>
+    <script src="js/settings.js"></script>
+    <script src="js/app.js"></script>
+
+    <!-- ================================================================
+    РЕГИСТРАЦИЯ SERVICE WORKER
+    ================================================================ -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(() => console.log('✅ Service Worker зарегистрирован'))
+                .catch(err => console.log('❌ Ошибка регистрации SW:', err));
+        }
+    </script>
+
+</body>
+</html>

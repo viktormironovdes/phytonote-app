@@ -1,5 +1,5 @@
 // ================================================================
-// КАТАЛОГ РАСТЕНИЙ
+// КАТАЛОГ РАСТЕНИЙ (версия 3.0)
 // ================================================================
 
 function loadCatalog() {
@@ -7,54 +7,149 @@ function loadCatalog() {
         const saved = localStorage.getItem('customCatalog');
         if (saved) {
             const parsed = JSON.parse(saved);
-            state.catalog = parsed.plants || [];
+            if (parsed.version === '3.0' && parsed.plants && parsed.characteristics) {
+                state.catalog = parsed;
+                state.catalogLoaded = true;
+            } else {
+                // Пытаемся преобразовать старый формат
+                state.catalog = convertOldCatalog(parsed);
+                state.catalogLoaded = true;
+            }
         } else {
-            state.catalog = [];
+            state.catalog = { version: '3.0', characteristics: [], plants: [] };
+            state.catalogLoaded = false;
         }
     } catch (e) {
-        state.catalog = [];
+        state.catalog = { version: '3.0', characteristics: [], plants: [] };
+        state.catalogLoaded = false;
     }
     updateCatalogStatus();
     renderCatalog();
+    // Синхронизируем растения с каталогом
+    syncAllFlowersWithCatalog();
 }
 
 function saveCatalogToStorage() {
-    const data = { version: '2.0', plants: state.catalog };
-    localStorage.setItem('customCatalog', JSON.stringify(data));
+    localStorage.setItem('customCatalog', JSON.stringify(state.catalog));
     updateCatalogStatus();
     renderCatalog();
 }
 
-function updateCatalogStatus() {
-    const count = state.catalog.length;
-    document.getElementById('catalogStatus').textContent = count > 0 ? `Загружено ${count} растений` : 'Не загружен';
+function convertOldCatalog(oldData) {
+    // Конвертация из версии 2.0 в 3.0
+    const characteristics = [
+        { id: 'watering', name: 'Полив', icon: '💧' },
+        { id: 'lighting', name: 'Освещение', icon: '☀️' },
+        { id: 'fertilizing', name: 'Подкормка', icon: '🧪' },
+        { id: 'repotting', name: 'Пересадка', icon: '🔄' },
+        { id: 'soil', name: 'Грунт', icon: '🌱' },
+        { id: 'temperature', name: 'Температура', icon: '🌡️' },
+        { id: 'humidity', name: 'Влажность', icon: '💨' },
+        { id: 'origin', name: 'Происхождение', icon: '🌍' },
+        { id: 'history', name: 'История', icon: '📖' },
+        { id: 'leaf', name: 'Листья', icon: '🍃' },
+        { id: 'flowering', name: 'Цветение', icon: '🌸' },
+        { id: 'toxicity', name: 'Токсичность', icon: '⚠️' },
+        { id: 'general', name: 'Общее', icon: '📌' },
+        { id: 'family', name: 'Семейство', icon: '🧬' },
+        { id: 'problems', name: 'Возможные проблемы', icon: '❗' },
+    ];
+    
+    const plants = (oldData.plants || []).map(p => {
+        const facts = [];
+        if (p.care_guide) {
+            const lines = p.care_guide.split('\n').filter(l => l.trim());
+            const factMap = {
+                'Освещение': 'lighting',
+                'Полив': 'watering',
+                'Температура': 'temperature',
+                'Влажность': 'humidity',
+                'Подкормка': 'fertilizing',
+                'Пересадка': 'repotting',
+                'Проблемы': 'problems',
+            };
+            
+            lines.forEach(line => {
+                for (const [key, value] of Object.entries(factMap)) {
+                    if (line.includes(key)) {
+                        const text = line.replace(/[🌱💧🌡💦🌿🔄⚠️*]/g, '').trim();
+                        facts.push({
+                            characteristic_id: value,
+                            short: text.substring(0, 200),
+                            full: text,
+                            source: 'Из справочника'
+                        });
+                        break;
+                    }
+                }
+            });
+        }
+        
+        return {
+            id: p.id,
+            name: p.name,
+            icon: p.icon || '🌿',
+            description: p.description || '',
+            growth_forms: p.growth_forms || [],
+            light_needs: p.light_needs || '',
+            dangerous_pets: p.dangerous_pets || false,
+            dangerous_children: p.dangerous_children || false,
+            default_watering_summer: p.default_watering_summer || 3,
+            default_watering_winter: p.default_watering_winter || 7,
+            default_fertilizing: p.default_fertilizing || 30,
+            default_repot_interval: p.default_repot_interval || 2,
+            default_light: p.default_light || 'Рассеянный свет',
+            default_soil: p.default_soil || '',
+            facts: facts.length > 0 ? facts : [
+                {
+                    characteristic_id: 'general',
+                    short: p.description || 'Информация о растении',
+                    full: p.description || 'Нет подробной информации',
+                    source: 'Ботанический справочник'
+                }
+            ]
+        };
+    });
+    
+    return {
+        version: '3.0',
+        characteristics: characteristics,
+        plants: plants
+    };
 }
 
-function getCatalogPlant(catalogId) {
-    return state.catalog.find(p => p.id === catalogId);
+function updateCatalogStatus() {
+    const count = state.catalog.plants.length;
+    const statusEl = document.getElementById('catalogStatus');
+    if (statusEl) {
+        statusEl.textContent = count > 0 ? `Загружено ${count} растений (v${state.catalog.version})` : 'Не загружен';
+    }
 }
 
 function renderCatalog() {
     const container = document.getElementById('catalogList');
-    const search = document.getElementById('plantsSearch').value.toLowerCase();
+    if (!container) return;
+    
+    const search = document.getElementById('plantsSearch')?.value.toLowerCase() || '';
+    const growthFilter = document.getElementById('filterGrowth')?.value || 'all';
+    const lightFilter = document.getElementById('filterLight')?.value || 'all';
+    const safetyFilter = document.getElementById('filterSafety')?.value || 'all';
 
-    const growthFilter = document.getElementById('filterGrowth').value;
-    const lightFilter = document.getElementById('filterLight').value;
-    const safetyFilter = document.getElementById('filterSafety').value;
-
-    if (state.catalog.length === 0) {
+    if (state.catalog.plants.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
                 <span class="icon-big">🌱</span>
                 <p>Каталог пуст</p>
-                <p style="font-size:14px;color:#8aa08a;margin-top:4px;">Импортируйте JSON-файл с растениями в разделе "Профиль"</p>
+                <p style="font-size:14px;color:#8aa08a;margin-top:4px;">Импортируйте JSON-файл с растениями (версия 3.0) в разделе "Профиль"</p>
                 <button class="btn btn-outline" onclick="navigateTo('profile')">Перейти в профиль</button>
             </div>
         `;
         return;
     }
 
-    let list = state.catalog.filter(p => p.name.toLowerCase().includes(search));
+    let list = state.catalog.plants.filter(p => 
+        p.name.toLowerCase().includes(search)
+    );
 
     if (growthFilter !== 'all') {
         list = list.filter(p => p.growth_forms && p.growth_forms.includes(growthFilter));
@@ -93,13 +188,24 @@ function importCatalog(event) {
     reader.onload = function(e) {
         try {
             const data = JSON.parse(e.target.result);
-            if (data.plants && Array.isArray(data.plants)) {
-                state.catalog = data.plants;
+            if (data.version === '3.0' && data.plants && data.characteristics) {
+                state.catalog = data;
+                state.catalogLoaded = true;
                 saveCatalogToStorage();
-                alert('✅ Каталог импортирован (' + state.catalog.length + ' растений)');
+                syncAllFlowersWithCatalog();
+                alert('✅ Каталог версии 3.0 импортирован (' + state.catalog.plants.length + ' растений, ' + state.catalog.characteristics.length + ' характеристик)');
+                renderAll();
+            } else if (data.plants) {
+                // Пробуем конвертировать старый формат
+                const converted = convertOldCatalog(data);
+                state.catalog = converted;
+                state.catalogLoaded = true;
+                saveCatalogToStorage();
+                syncAllFlowersWithCatalog();
+                alert('✅ Старый каталог преобразован в версию 3.0 (' + state.catalog.plants.length + ' растений)');
                 renderAll();
             } else {
-                alert('❌ Неверный формат файла. Ожидается { "plants": [...] }');
+                alert('❌ Неверный формат файла. Ожидается { "version": "3.0", "plants": [...], "characteristics": [...] }');
             }
         } catch (err) {
             alert('❌ Ошибка чтения файла: ' + err.message);
@@ -110,50 +216,86 @@ function importCatalog(event) {
 }
 
 function exportCatalog() {
-    if (state.catalog.length === 0) {
+    if (state.catalog.plants.length === 0) {
         alert('Каталог пуст. Нечего экспортировать.');
         return;
     }
-    const data = { version: '2.0', plants: state.catalog };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(state.catalog, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'catalog_' + new Date().toISOString().split('T')[0] + '.json';
+    a.download = 'catalog_v3_' + new Date().toISOString().split('T')[0] + '.json';
     a.click();
     URL.revokeObjectURL(url);
 }
 
 function clearCatalog() {
-    if (state.catalog.length === 0) {
+    if (state.catalog.plants.length === 0) {
         alert('Каталог уже пуст.');
         return;
     }
-    if (!confirm('🗑 Удалить весь каталог растений? Растения в ваших коллекциях не пострадают.')) return;
-    state.catalog = [];
+    if (!confirm('🗑 Удалить весь каталог растений? Растения в ваших коллекциях не пострадают, но справочная информация исчезнет.')) return;
+    state.catalog = { version: '3.0', characteristics: [], plants: [] };
+    state.catalogLoaded = false;
     localStorage.removeItem('customCatalog');
     updateCatalogStatus();
     renderCatalog();
     alert('✅ Каталог очищен');
 }
 
+// ================================================================
+// ПРЕВЬЮ КАТАЛОГА И ДОБАВЛЕНИЕ В КОЛЛЕКЦИЮ
+// ================================================================
+
 function showCatalogPreview(catalogId) {
-    const plant = state.catalog.find(p => p.id === catalogId);
-    if (!plant) return;
+    const plant = getCatalogPlant(catalogId);
+    if (!plant) {
+        alert('Растение не найдено в каталоге');
+        return;
+    }
+    
     if (state.bases.length === 0) {
         alert('Сначала создайте коллекцию в разделе "Коллекции"');
         return;
     }
+    
     const myBases = state.bases.filter(b => b.owner === 'Вы');
     if (myBases.length === 0) {
         alert('У вас нет своих коллекций. Создайте коллекцию в разделе "Коллекции"');
         return;
     }
-    const basesOptions = myBases.map(b => `<option value="${b.id}">${b.icon} ${getBaseDisplayName(b)}</option>`).join('');
-
+    
+    const basesOptions = myBases.map(b => 
+        `<option value="${b.id}">${b.icon} ${getBaseDisplayName(b)}</option>`
+    ).join('');
+    
     const today = new Date().toISOString().split('T')[0];
     const currentMonth = new Date().toISOString().slice(0, 7);
 
+    // Формируем информацию о растении
+    let factsHtml = '';
+    if (plant.facts && plant.facts.length > 0) {
+        const charMap = {};
+        state.catalog.characteristics.forEach(c => charMap[c.id] = c);
+        factsHtml = '<div style="margin-top:12px;"><div style="font-weight:600;font-size:14px;margin-bottom:4px;">📖 Справка</div>';
+        plant.facts.slice(0, 3).forEach(fact => {
+            const char = charMap[fact.characteristic_id];
+            const icon = char ? char.icon : '📌';
+            factsHtml += `
+                <div style="background:#f4f7f4;border-radius:8px;padding:8px 12px;margin-bottom:6px;">
+                    <div style="font-weight:600;font-size:13px;">${icon} ${char ? char.name : 'Информация'}</div>
+                    <div style="font-size:13px;color:#2d4a2d;">${fact.short}</div>
+                    ${fact.source ? `<div style="font-size:11px;color:#8aa08a;margin-top:2px;">📚 ${fact.source}</div>` : ''}
+                </div>
+            `;
+        });
+        if (plant.facts.length > 3) {
+            factsHtml += `<div style="font-size:12px;color:#8aa08a;text-align:center;">+ еще ${plant.facts.length - 3} фактов</div>`;
+        }
+        factsHtml += '</div>';
+    }
+
+    // Создаем overlay
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay show';
     overlay.id = 'previewModal';
@@ -178,12 +320,7 @@ function showCatalogPreview(catalogId) {
                     🔄 Пересадка: ${plant.default_repot_interval || 2} года<br>
                     🌱 Грунт: ${plant.default_soil || '—'}
                 </div>
-                ${plant.care_guide ? `
-                    <div style="margin-top:12px;">
-                        <div style="font-weight:600;font-size:14px;margin-bottom:4px;">📖 Подробный уход</div>
-                        <div class="care-guide" style="margin:0;">${plant.care_guide}</div>
-                    </div>
-                ` : ''}
+                ${factsHtml}
                 <div style="margin-top:14px;">
                     <label style="font-weight:600;display:block;margin-bottom:4px;">Добавить в коллекцию:</label>
                     <select id="previewBaseSelect" style="width:100%;padding:10px;border-radius:12px;border:1px solid #dce4dc;margin-bottom:8px;font-size:14px;">${basesOptions}</select>
@@ -204,18 +341,24 @@ function showCatalogPreview(catalogId) {
                     <label style="font-weight:600;display:block;margin-bottom:4px;">🔄 Последняя пересадка:</label>
                     <input id="previewLastRepotting" type="date" value="${today}" style="width:100%;padding:10px;border-radius:12px;border:1px solid #dce4dc;margin-bottom:8px;font-size:14px;" max="${today}">
 
-                    <button class="btn" onclick="addFromPreview('${plant.id}')" style="margin-top:4px;">➕ Добавить в коллекцию</button>
+                    <button class="btn" onclick="addFromCatalogPreview('${plant.id}')" style="margin-top:4px;">➕ Добавить в коллекцию</button>
                 </div>
             </div>
         </div>
     `;
     document.body.appendChild(overlay);
 
+    // Обновляем подсказки для расположения
     setTimeout(() => {
         updateLocationSuggestionsForPreview();
     }, 100);
 
-    overlay.addEventListener('click', function(e) { if (e.target === this) this.remove(); });
+    // Закрытие по клику на фон
+    overlay.addEventListener('click', function(e) {
+        if (e.target === this) {
+            this.remove();
+        }
+    });
 }
 
 function updateLocationSuggestionsForPreview() {
@@ -239,13 +382,27 @@ function updateLocationSuggestionsForPreview() {
         .join('');
 }
 
-function addFromPreview(catalogId) {
+// Слушаем изменение базы в превью для обновления подсказок
+document.addEventListener('change', function(e) {
+    if (e.target.id === 'previewBaseSelect') {
+        updateLocationSuggestionsForPreview();
+    }
+});
+
+function addFromCatalogPreview(catalogId) {
     const select = document.getElementById('previewBaseSelect');
     const baseId = select ? select.value : null;
-    if (!baseId || !getBase(baseId)) { alert('Выберите коллекцию'); return; }
+    
+    if (!baseId || !getBase(baseId)) {
+        alert('Выберите коллекцию');
+        return;
+    }
 
-    const plant = state.catalog.find(p => p.id === catalogId);
-    if (!plant) return;
+    const plant = getCatalogPlant(catalogId);
+    if (!plant) {
+        alert('Растение не найдено в каталоге');
+        return;
+    }
 
     const today = new Date().toISOString().split('T')[0];
     const currentMonth = new Date().toISOString().slice(0, 7);
@@ -255,28 +412,31 @@ function addFromPreview(catalogId) {
         catalog_id: plant.id,
         base_id: baseId,
         source_type: 'catalog',
-
+        
+        // Локальные характеристики
         name: plant.name,
-        latin_name: '',
         placement: document.getElementById('previewPlacement')?.value || '—',
         planting_date: document.getElementById('previewPlantingDate')?.value || currentMonth,
         condition: 'Хорошее',
         light: plant.default_light || 'Рассеянный свет',
         photo: null,
-
         watering_summer: plant.default_watering_summer || 3,
         watering_winter: plant.default_watering_winter || 7,
         fertilizing: plant.default_fertilizing || 30,
         fertilizing_start: 3,
         fertilizing_end: 10,
         repot_interval: plant.default_repot_interval || 2,
-
         last_watering: document.getElementById('previewLastWatering')?.value || today,
         last_fertilizing: document.getElementById('previewLastFertilizing')?.value || today,
         last_repotting: document.getElementById('previewLastRepotting')?.value || today,
-
-        care_info: plant.care_guide || '',
         notes: plant.default_soil ? 'Грунт: ' + plant.default_soil : '',
+        latin_name: '',
+        
+        // Копия из каталога (для быстрого доступа)
+        catalog_name: plant.name,
+        catalog_icon: plant.icon || '🌿',
+        catalog_description: plant.description || '',
+        
         createdAt: new Date().toISOString()
     };
 
@@ -306,9 +466,34 @@ function addFromPreview(catalogId) {
     });
 
     saveState();
-    document.getElementById('previewModal')?.remove();
+    
+    // Закрываем превью
+    const previewModal = document.getElementById('previewModal');
+    if (previewModal) previewModal.remove();
+    
     renderAll();
     renderCare();
     renderCalendar();
+    
     alert('✅ ' + plant.name + ' добавлен в коллекцию!');
+}
+
+// Обновление подсказок для расположения (глобальное)
+function updateLocationSuggestions() {
+    const baseId = state.currentBaseId;
+    const datalist = document.getElementById('locationSuggestions');
+    if (!datalist) return;
+
+    const locations = new Set();
+    state.flowers
+        .filter(f => f.base_id === baseId)
+        .forEach(f => {
+            if (f.placement && f.placement !== '—') {
+                locations.add(f.placement);
+            }
+        });
+
+    datalist.innerHTML = [...locations]
+        .map(l => `<option value="${l}">`)
+        .join('');
 }

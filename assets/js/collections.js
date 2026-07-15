@@ -1,5 +1,5 @@
 // ================================================================
-// КОЛЛЕКЦИИ
+// КОЛЛЕКЦИИ (бывшие "Базы")
 // ================================================================
 
 let selectedIcon = '🏠';
@@ -92,22 +92,23 @@ function renderBasePlants() {
         const status = getWateringStatus(f);
         const days = getDaysUntilWatering(f);
         const dotClass = status === 'red' ? 'red' : status === 'yellow' ? 'yellow' : 'green';
-        const catalogPlant = getCatalogPlant(f.catalog_id);
-        const hasCare = catalogPlant && catalogPlant.care_guide && catalogPlant.care_guide.trim().length > 0;
+        const displayName = f.catalog_name || f.name;
+        const displayIcon = f.catalog_icon || '🌿';
         const ageDisplay = f.planting_date ? calculateAge(f.planting_date) : '';
+        const hasFacts = f.catalog_id && isCatalogLoaded() && getPlantFacts(f).length > 0;
         return `
             <div class="card" onclick="${isEditable ? `showDetail('${f.id}')` : `showReadOnlyDetail('${f.id}')`}">
                 <div class="avatar">
-                    ${f.photo ? `<img src="${f.photo}" alt="${f.name}">` : '🌿'}
+                    ${f.photo ? `<img src="${f.photo}" alt="${displayName}">` : displayIcon}
                 </div>
                 <div class="info">
-                    <div class="title">${f.name}</div>
+                    <div class="title">${displayName}</div>
                     <div class="sub">${f.placement || '—'} ${ageDisplay ? '· ' + ageDisplay : ''}</div>
                     <div class="meta"><span>💧 ${days > 0 ? days + ' дн.' : 'сегодня'}</span></div>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;">
                     ${!isEditable ? '<span class="badge-owner">👁️</span>' : ''}
-                    ${hasCare ? '<span class="badge-owner">📖</span>' : ''}
+                    ${hasFacts ? '<span class="badge-owner">📖</span>' : ''}
                     <div class="status-dot ${dotClass}"></div>
                 </div>
             </div>
@@ -256,7 +257,9 @@ function importBase(event) {
                 if (!f.fertilizing_start) f.fertilizing_start = 3;
                 if (!f.fertilizing_end) f.fertilizing_end = 10;
                 if (!f.last_repotting) f.last_repotting = new Date().toISOString().split('T')[0];
-                if (!f.care_info) f.care_info = '';
+                if (!f.catalog_name) f.catalog_name = f.name;
+                if (!f.catalog_icon) f.catalog_icon = '🌿';
+                if (!f.catalog_description) f.catalog_description = '';
                 state.flowers.push(f);
                 data.history?.forEach(h => {
                     if (h.flower_id === oldId) {

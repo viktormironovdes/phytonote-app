@@ -46,3 +46,63 @@ function getSeason() {
     if (m >= 8 && m <= 10) return 'autumn';
     return 'winter';
 }
+
+function getWateringInterval(flower) {
+    const season = getSeason();
+    if (season === 'summer' || season === 'spring') return flower.watering_summer || 3;
+    return flower.watering_winter || 7;
+}
+
+function getWateringStatus(flower) {
+    const interval = getWateringInterval(flower);
+    const last = new Date(flower.last_watering || Date.now());
+    const diff = Math.floor((new Date() - last) / 86400000);
+    if (diff >= interval) return 'red';
+    if (diff >= interval - 1) return 'yellow';
+    return 'green';
+}
+
+function getDaysUntilWatering(flower) {
+    const interval = getWateringInterval(flower);
+    const last = new Date(flower.last_watering || Date.now());
+    const diff = Math.floor((new Date() - last) / 86400000);
+    return interval - diff;
+}
+
+function getNextWateringDate(flower) {
+    const interval = getWateringInterval(flower);
+    const last = new Date(flower.last_watering || Date.now());
+    const d = new Date(last);
+    d.setDate(d.getDate() + interval);
+    return d;
+}
+
+function isFertilizingActive(flower) {
+    const now = new Date();
+    const month = now.getMonth() + 1;
+    const start = flower.fertilizing_start || 3;
+    const end = flower.fertilizing_end || 10;
+    if (start <= end) {
+        return month >= start && month <= end;
+    } else {
+        return month >= start || month <= end;
+    }
+}
+
+function getFertilizingStatus(flower) {
+    if (!flower.fertilizing || flower.fertilizing <= 0) return 'Не требуется';
+    if (!isFertilizingActive(flower)) return '⏸️ Период покоя';
+    const last = new Date(flower.last_fertilizing || Date.now());
+    const diff = Math.floor((new Date() - last) / 86400000);
+    if (diff >= flower.fertilizing) return '🔴 Пора';
+    if (diff >= flower.fertilizing - 2) return '🟡 Скоро';
+    return '🟢 В норме';
+}
+
+function getDaysUntilFertilizing(flower) {
+    if (!flower.fertilizing || flower.fertilizing <= 0) return Infinity;
+    if (!isFertilizingActive(flower)) return Infinity;
+    const last = new Date(flower.last_fertilizing || Date.now());
+    const diff = Math.floor((new Date() - last) / 86400000);
+    return flower.fertilizing - diff;
+}

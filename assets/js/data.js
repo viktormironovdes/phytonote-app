@@ -3,15 +3,29 @@
 // ================================================================
 
 let state = {
+    // КОЛЛЕКЦИИ (локальные)
     bases: [],
+    
+    // РАСТЕНИЯ В КОЛЛЕКЦИЯХ (локальные экземпляры)
     flowers: [],
+    
+    // ИСТОРИЯ УХОДА
     history: [],
-    catalog: [],
+    
+    // КАТАЛОГ (глобальный справочник)
+    catalog: {
+        version: '3.0',
+        characteristics: [],
+        plants: []
+    },
+    
+    // ПОЛЬЗОВАТЕЛЬ
     user: {
         name: 'Вы',
         email: '',
         avatar: null,
         notifications: { push: true, email: false },
+        // Настройки: какие характеристики показывать в основном блоке
         display_settings: {
             show_placement: true,
             show_condition: true,
@@ -26,6 +40,8 @@ let state = {
             show_care_info: false,
         }
     },
+    
+    // ТЕКУЩЕЕ СОСТОЯНИЕ
     currentBaseId: null,
     currentPage: 'care',
     detailFlowerId: null,
@@ -33,7 +49,14 @@ let state = {
     isExpanded: false,
     selectedCalendarDate: null,
     detailTab: 'main',
+    
+    // ФАЙЛЫ ДАННЫХ
+    catalogLoaded: false,
 };
+
+// ================================================================
+// БАЗОВЫЕ ФУНКЦИИ
+// ================================================================
 
 function loadState() {
     try {
@@ -124,12 +147,68 @@ function getBase(id) { return state.bases.find(b => b.id === id); }
 function getFlower(id) { return state.flowers.find(f => f.id === id); }
 function getFlowersByBase(baseId) { return state.flowers.filter(f => f.base_id === baseId); }
 function getHistoryByFlower(flowerId) { return state.history.filter(h => h.flower_id === flowerId).sort((a, b) => a.date.localeCompare(b.date)); }
+
 function isBaseEditable(baseId) {
     const base = getBase(baseId);
     return base && base.owner === 'Вы';
 }
+
 function getBaseDisplayName(base) {
     if (!base) return '—';
     if (base.my_name && base.owner !== 'Вы') return base.my_name;
     return base.name;
+}
+
+// ================================================================
+// РАБОТА С КАТАЛОГОМ
+// ================================================================
+
+function getCatalogPlant(catalogId) {
+    return state.catalog.plants.find(p => p.id === catalogId);
+}
+
+function getCharacteristics() {
+    return state.catalog.characteristics || [];
+}
+
+function getCharacteristic(id) {
+    return state.catalog.characteristics.find(c => c.id === id);
+}
+
+function getPlantFacts(flower) {
+    if (!flower || !flower.catalog_id) return [];
+    const catalogPlant = getCatalogPlant(flower.catalog_id);
+    if (!catalogPlant || !catalogPlant.facts) return [];
+    return catalogPlant.facts;
+}
+
+function getFactForCharacteristic(flower, characteristicId) {
+    const facts = getPlantFacts(flower);
+    return facts.find(f => f.characteristic_id === characteristicId);
+}
+
+function isCatalogLoaded() {
+    return state.catalog.plants && state.catalog.plants.length > 0;
+}
+
+function syncFlowerWithCatalog(flower) {
+    const catalogPlant = getCatalogPlant(flower.catalog_id);
+    if (catalogPlant) {
+        // Обновляем справочную информацию из каталога
+        flower.catalog_name = catalogPlant.name;
+        flower.catalog_icon = catalogPlant.icon;
+        flower.catalog_description = catalogPlant.description || '';
+        // Не трогаем локальные характеристики
+        return true;
+    }
+    return false;
+}
+
+function syncAllFlowersWithCatalog() {
+    let updated = 0;
+    state.flowers.forEach(flower => {
+        if (syncFlowerWithCatalog(flower)) updated++;
+    });
+    if (updated > 0) saveState();
+    return updated;
 }

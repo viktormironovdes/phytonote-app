@@ -172,10 +172,11 @@ function showDayEvents(dateStr) {
     const typeMap = { watering: '💧 Полив', fertilizing: '🧪 Подкормка', repotting: '🔄 Пересадка' };
     container.innerHTML = events.map(e => {
         const status = e.planned ? '🟠 Запланировано' : '🟢 Выполнено';
+        const displayName = e.flower.catalog_name || e.flower.name;
         return `
             <div class="event-plank" onclick="showDetail('${e.flower.id}')">
                 <div>
-                    <div class="name">${e.flower.name}</div>
+                    <div class="name">${displayName}</div>
                     <div class="sub">${e.flower.placement || ''} · ${typeMap[e.type] || e.type}</div>
                 </div>
                 <span class="badge">${status}</span>

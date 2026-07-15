@@ -1,5 +1,5 @@
 // ================================================================
-// SERVICE WORKER (sw.js) - для Capacitor
+// SERVICE WORKER (sw.js)
 // ================================================================
 
 const CACHE_NAME = 'phytonote-v1';
@@ -22,7 +22,6 @@ const ASSETS = [
   '/icons/icon-512.png'
 ];
 
-// Установка Service Worker — кешируем файлы
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -34,7 +33,6 @@ self.addEventListener('install', event => {
   );
 });
 
-// Активация — удаляем старые кеши
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys => {
@@ -46,7 +44,6 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Обработка запросов — сначала кеш, потом сеть
 self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request)

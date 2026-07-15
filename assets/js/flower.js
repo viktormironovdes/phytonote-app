@@ -1,657 +1,181 @@
 // ================================================================
-// КАРТОЧКА РАСТЕНИЯ - ДЕТАЛЬНЫЙ ПРОСМОТР
+// ПРОФИЛЬ И НАСТРОЙКИ
 // ================================================================
 
-function showDetail(flowerId) {
-    state.detailFlowerId = flowerId;
-    state.isDetailEdit = false;
-    state.isExpanded = false;
-    state.detailTab = 'main';
-    renderDetail();
-    document.getElementById('detailModal').classList.add('show');
-}
-
-function toggleExpand() {
-    state.isExpanded = !state.isExpanded;
-    renderDetail();
-}
-
-function switchDetailTab(tab) {
-    state.detailTab = tab;
-    renderDetail();
-}
-
-function toggleDetailEdit() {
-    const f = getFlower(state.detailFlowerId);
-    if (!f) return;
-    if (!isBaseEditable(f.base_id)) {
-        alert('Это чужая коллекция, редактирование недоступно.');
-        return;
-    }
-    state.isDetailEdit = !state.isDetailEdit;
-    renderDetail();
-}
-
-function renderDetail() {
-    const f = getFlower(state.detailFlowerId);
-    if (!f) return;
-
-    const base = getBase(f.base_id);
-    const isEditable = isBaseEditable(f.base_id);
-    const history = getHistoryByFlower(f.id);
-    const settings = state.user.display_settings || {};
-    const editMode = state.isDetailEdit && isEditable;
-    const expanded = state.isExpanded;
-    const today = new Date().toISOString().split('T')[0];
-
-    // Основная информация
-    const status = getWateringStatus(f);
-    const days = getDaysUntilWatering(f);
-    const statusText = status === 'red' ? '🔴 Пора поливать' : status === 'yellow' ? '🟡 Скоро полив' : '🟢 В норме';
-    const fertStatus = getFertilizingStatus(f);
-    const ageDisplay = f.planting_date ? calculateAge(f.planting_date) : 'Неизвестно';
-    const displayName = f.catalog_name || f.name;
-    const displayIcon = f.catalog_icon || '🌿';
-
-    // Период подкормки
-    const fertilizingPeriod = f.fertilizing_start && f.fertilizing_end ?
-        `с ${['Января','Февраля','Марта','Апреля','Мая','Июня','Июля','Августа','Сентября','Октября','Ноября','Декабря'][f.fertilizing_start-1]} по ${['Января','Февраля','Марта','Апреля','Мая','Июня','Июля','Августа','Сентября','Октября','Ноября','Декабря'][f.fertilizing_end-1]}` :
-        'Не указан';
-
-    // История
-    const historyHtml = history.slice(-5).reverse().map(h => `
-        <div class="history-item">
-            <span>${h.date}</span>
-            <span>${h.type === 'watering' ? '💧 Полив' : h.type === 'fertilizing' ? '🧪 Подкормка' : '🔄 Пересадка'}</span>
-            <span>${h.notes || ''}</span>
-        </div>
-    `).join('') || 'Нет истории';
-
-    // ФОТО
-    const photoHtml = `
-        <div class="detail-header">
-            <div class="photo-container" onclick="${isEditable ? `document.getElementById('flowerPhotoInput').click()` : ''}">
-                ${f.photo ? `<img src="${f.photo}" alt="${displayName}">` : `<div class="no-photo">${displayIcon}</div>`}
-                <div class="photo-hint">${isEditable ? 'Нажмите, чтобы заменить фото' : ''}</div>
-                ${isEditable ? `<input type="file" id="flowerPhotoInput" accept="image/*" style="display:none" onchange="handleFlowerPhotoUpload('${f.id}')">` : ''}
-            </div>
-            ${isEditable ? `
-                <button class="edit-btn-overlay" onclick="${editMode ? 'saveDetailEdit()' : 'toggleDetailEdit()'}" title="${editMode ? 'Сохранить' : 'Редактировать'}">
-                    ${editMode ? '💾' : '✏️'}
-                </button>
-            ` : ''}
-            <button class="close-btn-overlay" onclick="closeDetailModal()" title="Закрыть">✕</button>
-        </div>
-    `;
-
-    // ВКЛАДКИ (Основное и Справка)
-    const tabsHtml = `
-        <div class="detail-tabs">
-            <button class="${state.detailTab === 'main' ? 'active' : ''}" onclick="switchDetailTab('main')">📋 Основное</button>
-            <button class="${state.detailTab === 'info' ? 'active' : ''}" onclick="switchDetailTab('info')">📖 Справка</button>
-        </div>
-    `;
-
-    // ============================================================
-    // ВКЛАДКА "ОСНОВНОЕ"
-    // ============================================================
-    let mainContent = `
-        <div class="detail-field">
-            <span class="label">🌿 Название</span>
-            <span class="value" style="font-weight:700;font-size:18px;">${displayName}</span>
-        </div>
-    `;
-
-    // Латинское название (из каталога или локальное)
-    const catalogPlant = getCatalogPlant(f.catalog_id);
-    const latinName = catalogPlant?.facts?.find(f => f.characteristic_id === 'botanical_name')?.short || f.latin_name || '';
-    if (settings.show_latin_name && latinName) {
-        mainContent += `
-            <div class="detail-field">
-                <span class="label">🔬 Ботаническое</span>
-                <span class="value value-italic">${latinName}</span>
-            </div>
-        `;
-    }
-
-    // Расположение
-    if (settings.show_placement || expanded) {
-        mainContent += `
-            <div class="detail-field">
-                <span class="label">📍 Расположение</span>
-                ${editMode ? `<input id="editPlacement" value="${f.placement || ''}" list="editLocationSuggestions"><datalist id="editLocationSuggestions"></datalist>` : `<span class="value">${f.placement || '—'}</span>`}
-            </div>
-        `;
-    }
-
-    // Дата посадки
-    if (settings.show_planting_date || expanded) {
-        mainContent += `
-            <div class="detail-field">
-                <span class="label">🌱 Посажено</span>
-                ${editMode ? `<input id="editPlantingDate" type="month" value="${f.planting_date || ''}">` : `<span class="value">${f.planting_date ? new Date(f.planting_date).toLocaleString('ru', { month: 'long', year: 'numeric' }) : '—'} (${ageDisplay})</span>`}
-            </div>
-        `;
-    }
-
-    // Состояние
-    if (settings.show_condition || expanded) {
-        mainContent += `
-            <div class="detail-field">
-                <span class="label">💚 Состояние</span>
-                ${editMode ? `
-                    <select id="editCondition">
-                        <option value="Отличное" ${f.condition === 'Отличное' ? 'selected' : ''}>💚 Отличное</option>
-                        <option value="Хорошее" ${f.condition === 'Хорошее' ? 'selected' : ''}>💛 Хорошее</option>
-                        <option value="Удовлетворительное" ${f.condition === 'Удовлетворительное' ? 'selected' : ''}>🧡 Удовл.</option>
-                        <option value="Плохое" ${f.condition === 'Плохое' ? 'selected' : ''}>❤️ Плохое</option>
-                    </select>
-                ` : `<span class="value">${f.condition || '—'}</span>`}
-            </div>
-        `;
-    }
-
-    // Освещённость
-    if (settings.show_light || expanded) {
-        mainContent += `
-            <div class="detail-field">
-                <span class="label">☀️ Освещённость</span>
-                ${editMode ? `
-                    <select id="editLight">
-                        <option value="Яркий свет" ${f.light === 'Яркий свет' ? 'selected' : ''}>☀️ Яркий свет</option>
-                        <option value="Рассеянный свет" ${f.light === 'Рассеянный свет' ? 'selected' : ''}>🌤 Рассеянный</option>
-                        <option value="Полутень" ${f.light === 'Полутень' ? 'selected' : ''}>🌥 Полутень</option>
-                        <option value="Тень" ${f.light === 'Тень' ? 'selected' : ''}>🌑 Тень</option>
-                    </select>
-                ` : `<span class="value">${f.light || '—'}</span>`}
-            </div>
-        `;
-    }
-
-    // Полив
-    if (settings.show_watering || expanded) {
-        mainContent += `
-            <div class="detail-field">
-                <span class="label">💧 Полив</span>
-                <span class="value">${days > 0 ? 'Через ' + days + ' дн.' : 'Сегодня'} (${statusText})</span>
-            </div>
-        `;
-    }
-
-    // Подкормка
-    if (settings.show_fertilizing || expanded) {
-        mainContent += `
-            <div class="detail-field">
-                <span class="label">🧪 Подкормка</span>
-                <span class="value">${fertStatus}</span>
-            </div>
-        `;
-    }
-
-    // Период подкормки
-    if ((settings.show_fertilizing_period || expanded) && f.fertilizing > 0) {
-        mainContent += `
-            <div class="detail-field">
-                <span class="label">📅 Период подкормки</span>
-                ${editMode ? `
-                    <div style="display:flex;gap:8px;width:60%;">
-                        <select id="editFertStart" style="flex:1;">
-                            ${[1,2,3,4,5,6,7,8,9,10,11,12].map(m => `<option value="${m}" ${f.fertilizing_start === m ? 'selected' : ''}>${['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'][m-1]}</option>`).join('')}
-                        </select>
-                        <span style="color:#5c725c;">—</span>
-                        <select id="editFertEnd" style="flex:1;">
-                            ${[1,2,3,4,5,6,7,8,9,10,11,12].map(m => `<option value="${m}" ${f.fertilizing_end === m ? 'selected' : ''}>${['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'][m-1]}</option>`).join('')}
-                        </select>
-                    </div>
-                ` : `<span class="value">${fertilizingPeriod}</span>`}
-            </div>
-        `;
-    }
-
-    // Последняя пересадка
-    if ((settings.show_last_repotting || expanded) && f.last_repotting) {
-        mainContent += `
-            <div class="detail-field">
-                <span class="label">🔄 Последняя пересадка</span>
-                ${editMode ? `<input id="editLastRepotting" type="date" value="${f.last_repotting || ''}" max="${today}">` : `<span class="value">${f.last_repotting || '—'}</span>`}
-            </div>
-        `;
-    }
-
-    // Примечания
-    if (settings.show_notes || expanded) {
-        mainContent += `
-            <div class="detail-field">
-                <span class="label">📝 Примечания</span>
-                ${editMode ? `<textarea id="editNotes" rows="2" style="width:60%;">${f.notes || ''}</textarea>` : `<span class="value">${f.notes || '—'}</span>`}
-            </div>
-        `;
-    }
-
-    // ============================================================
-    // РАЗВЕРНУТЫЕ ПАРАМЕТРЫ
-    // ============================================================
-    let expandedContent = '';
-    if (expanded) {
-        let allBasesOptions = state.bases
-            .filter(b => b.owner === 'Вы')
-            .map(b => `<option value="${b.id}" ${b.id === f.base_id ? 'selected' : ''}>${b.icon} ${getBaseDisplayName(b)}</option>`)
-            .join('');
-
-        expandedContent = `
-            <div style="margin-top:8px;border-top:1px solid #eef3ee;padding-top:8px;">
-                <div style="font-weight:600;font-size:13px;color:#5c725c;margin-bottom:6px;">🔧 Все параметры</div>
-                <div class="detail-field">
-                    <span class="label">📁 Коллекция</span>
-                    ${editMode ? `
-                        <select id="editBase">
-                            ${allBasesOptions}
-                        </select>
-                    ` : `<span class="value">${base ? getBaseDisplayName(base) + (base.owner !== 'Вы' ? ' (👤 ' + base.owner + ')' : '') : '—'}</span>`}
-                </div>
-                <div class="detail-field">
-                    <span class="label">💧 Полив (лето)</span>
-                    ${editMode ? `<input id="editWaterSummer" type="number" min="1" value="${f.watering_summer}">` : `<span class="value">${f.watering_summer} дн.</span>`}
-                </div>
-                <div class="detail-field">
-                    <span class="label">💧 Полив (зима)</span>
-                    ${editMode ? `<input id="editWaterWinter" type="number" min="1" value="${f.watering_winter}">` : `<span class="value">${f.watering_winter} дн.</span>`}
-                </div>
-                <div class="detail-field">
-                    <span class="label">🧪 Интервал подкормки</span>
-                    ${editMode ? `<input id="editFert" type="number" min="0" value="${f.fertilizing}">` : `<span class="value">${f.fertilizing > 0 ? f.fertilizing + ' дн.' : 'Нет'}</span>`}
-                </div>
-                <div class="detail-field">
-                    <span class="label">📅 Период подкормки</span>
-                    <span class="value">${fertilizingPeriod}</span>
-                </div>
-                <div class="detail-field">
-                    <span class="label">🔄 Пересадка</span>
-                    ${editMode ? `<input id="editRepot" type="number" min="1" value="${f.repot_interval}">` : `<span class="value">${f.repot_interval} лет</span>`}
-                </div>
-                <div class="detail-field">
-                    <span class="label">📅 Последний полив</span>
-                    ${editMode ? `<input id="editLastWatering" type="date" value="${f.last_watering || ''}" max="${today}">` : `<span class="value">${f.last_watering || '—'}</span>`}
-                </div>
-                <div class="detail-field">
-                    <span class="label">🧪 Последняя подкормка</span>
-                    ${editMode ? `<input id="editLastFertilizing" type="date" value="${f.last_fertilizing || ''}" max="${today}">` : `<span class="value">${f.last_fertilizing || '—'}</span>`}
-                </div>
-                <div class="detail-field">
-                    <span class="label">🔄 Последняя пересадка</span>
-                    ${editMode ? `<input id="editLastRepottingCare" type="date" value="${f.last_repotting || ''}" max="${today}">` : `<span class="value">${f.last_repotting || '—'}</span>`}
-                </div>
-                ${editMode ? `
-                    <div class="detail-field">
-                        <span class="label">📝 Примечания</span>
-                        <textarea id="editNotesExpanded" rows="2" style="width:60%;">${f.notes || ''}</textarea>
-                    </div>
-                ` : ''}
-            </div>
-        `;
-    }
-
-    // КНОПКА РАЗВЕРНУТЬ/СВЕРНУТЬ
-    const expandBtnHtml = `
-        <button class="btn-expand" onclick="toggleExpand()" style="margin-top:16px;">
-            ${expanded ? 'Свернуть все параметры' : 'Развернуть все параметры'}
-            <span class="arrow ${expanded ? 'open' : ''}">▼</span>
-        </button>
-    `;
-
-    // ИСТОРИЯ
-    const historyBlock = `
-        <div style="margin-top:12px;padding:0 20px;">
-            <div style="font-weight:600;font-size:14px;">📜 История (последние 5)</div>
-            ${historyHtml}
-        </div>
-    `;
-
-    // ============================================================
-    // ВКЛАДКА "СПРАВКА"
-    // ============================================================
-    let infoContent = '';
-    if (isCatalogLoaded() && f.catalog_id) {
-        const plant = getCatalogPlant(f.catalog_id);
-        const facts = plant?.facts || [];
-        const charMap = {};
-        state.catalog.characteristics.forEach(c => charMap[c.id] = c);
-
-        if (facts.length > 0) {
-            infoContent = facts.map(fact => {
-                const char = charMap[fact.characteristic_id];
-                const icon = char ? char.icon : '📌';
-                const name = char ? char.name : 'Информация';
-                return `
-                    <div style="background:#f8fbf8;border-radius:10px;padding:12px 14px;margin-bottom:8px;border-left:3px solid #3a7a3a;cursor:pointer;" onclick="showFactDetail('${f.catalog_id}', '${fact.characteristic_id}')">
-                        <div style="font-weight:600;font-size:14px;display:flex;align-items:center;gap:6px;">
-                            ${icon} ${name}
-                            <span style="font-size:12px;color:#8aa08a;margin-left:auto;">📖 Подробнее →</span>
-                        </div>
-                        <div style="font-size:13px;color:#2d4a2d;margin-top:4px;">${fact.short}</div>
-                        ${fact.source ? `<div style="font-size:11px;color:#8aa08a;margin-top:4px;">📚 ${fact.source}</div>` : ''}
-                    </div>
-                `;
-            }).join('');
-        } else {
-            infoContent = `
-                <div style="text-align:center;padding:30px 0;color:#8aa08a;">
-                    📖 Нет справочной информации о растении
-                </div>
-            `;
-        }
-    } else if (!isCatalogLoaded()) {
-        infoContent = `
-            <div style="text-align:center;padding:30px 0;color:#8aa08a;">
-                📚 Каталог не загружен
-                <p style="font-size:13px;margin-top:4px;">Импортируйте каталог в разделе "Профиль"</p>
-                <button class="btn btn-sm btn-outline" onclick="navigateTo('profile')" style="margin-top:8px;width:auto;">Перейти</button>
-            </div>
-        `;
-    } else {
-        infoContent = `
-            <div style="text-align:center;padding:30px 0;color:#8aa08a;">
-                📖 Нет справочной информации
-            </div>
-        `;
-    }
-
-    // ДЕЙСТВИЯ
-    const actionsHtml = `
-        <div class="detail-actions-bottom">
-            ${isEditable ? `
-                <button class="btn btn-sm btn-success" onclick="detailWaterNow()">💧 Полить</button>
-                <button class="btn btn-sm btn-success" onclick="detailFertilizeNow()">🧪 Подкормить</button>
-                <button class="btn btn-sm btn-outline" onclick="showCloneModal()">📋 Клон</button>
-                <div class="danger-spacer"></div>
-                <button class="btn btn-sm btn-danger" onclick="deleteFlower()">🗑</button>
-            ` : `
-                <span class="readonly-badge" style="margin:auto;">🔒 Только просмотр</span>
-            `}
-        </div>
-    `;
-
-    // СБОРКА
-    const detailHtml = `
-        ${photoHtml}
-        <div style="padding:0 0 8px 0;">
-            ${tabsHtml}
-            <div class="detail-tab-content ${state.detailTab === 'main' ? 'active' : ''}" style="padding:0 20px;">
-                ${mainContent}
-                ${expandedContent}
-                ${historyBlock}
-                ${expandBtnHtml}
-            </div>
-            <div class="detail-tab-content ${state.detailTab === 'info' ? 'active' : ''}" style="padding:0 20px;">
-                ${infoContent}
-            </div>
-            ${actionsHtml}
-        </div>
-    `;
-
-    document.getElementById('detailBody').innerHTML = detailHtml;
-
-    // Обновляем подсказки для расположения
-    if (editMode) {
-        const editDatalist = document.getElementById('editLocationSuggestions');
-        if (editDatalist) {
-            const locations = new Set();
-            state.flowers
-                .filter(fl => fl.base_id === f.base_id)
-                .forEach(fl => {
-                    if (fl.placement && fl.placement !== '—') {
-                        locations.add(fl.placement);
-                    }
-                });
-            editDatalist.innerHTML = [...locations]
-                .map(l => `<option value="${l}">`)
-                .join('');
-        }
-    }
-}
-
-function saveDetailEdit() {
-    const f = getFlower(state.detailFlowerId);
-    if (!f) return;
-
-    const placementInput = document.getElementById('editPlacement');
-    if (placementInput) f.placement = placementInput.value.trim() || '—';
-
-    const plantingInput = document.getElementById('editPlantingDate');
-    if (plantingInput) f.planting_date = plantingInput.value;
-
-    const conditionInput = document.getElementById('editCondition');
-    if (conditionInput) f.condition = conditionInput.value;
-
-    const lightInput = document.getElementById('editLight');
-    if (lightInput) f.light = lightInput.value;
-
-    const baseInput = document.getElementById('editBase');
-    if (baseInput) {
-        const newBaseId = baseInput.value;
-        if (newBaseId !== f.base_id && getBase(newBaseId)) {
-            f.base_id = newBaseId;
-        }
-    }
-
-    const waterSummerInput = document.getElementById('editWaterSummer');
-    if (waterSummerInput) f.watering_summer = parseInt(waterSummerInput.value) || 3;
-
-    const waterWinterInput = document.getElementById('editWaterWinter');
-    if (waterWinterInput) f.watering_winter = parseInt(waterWinterInput.value) || 7;
-
-    const fertInput = document.getElementById('editFert');
-    if (fertInput) f.fertilizing = parseInt(fertInput.value) || 0;
-
-    const fertStartInput = document.getElementById('editFertStart');
-    if (fertStartInput) f.fertilizing_start = parseInt(fertStartInput.value) || 3;
-
-    const fertEndInput = document.getElementById('editFertEnd');
-    if (fertEndInput) f.fertilizing_end = parseInt(fertEndInput.value) || 10;
-
-    const repotInput = document.getElementById('editRepot');
-    if (repotInput) f.repot_interval = parseInt(repotInput.value) || 2;
-
-    const lastWateringInput = document.getElementById('editLastWatering');
-    if (lastWateringInput) f.last_watering = lastWateringInput.value;
-
-    const lastFertilizingInput = document.getElementById('editLastFertilizing');
-    if (lastFertilizingInput) f.last_fertilizing = lastFertilizingInput.value;
-
-    const lastRepottingInput = document.getElementById('editLastRepotting') || document.getElementById('editLastRepottingCare');
-    if (lastRepottingInput) f.last_repotting = lastRepottingInput.value;
-
-    const notesInput = document.getElementById('editNotes') || document.getElementById('editNotesExpanded');
-    if (notesInput) f.notes = notesInput.value.trim();
-
-    state.isDetailEdit = false;
-    saveState();
-    renderDetail();
-    renderAll();
-    renderCare();
-    renderCalendar();
-    alert('✅ Изменения сохранены!');
-}
-
-function closeDetailModal() {
-    document.getElementById('detailModal').classList.remove('show');
-    state.detailFlowerId = null;
-    state.isDetailEdit = false;
-    state.isExpanded = false;
-    state.detailTab = 'main';
-}
-
-function showReadOnlyDetail(flowerId) {
-    state.detailFlowerId = flowerId;
-    state.isDetailEdit = false;
-    state.isExpanded = false;
-    state.detailTab = 'main';
-    renderDetail();
-    document.getElementById('detailModal').classList.add('show');
-}
-
-function detailWaterNow() {
-    const f = getFlower(state.detailFlowerId);
-    if (!f) return;
-    if (!isBaseEditable(f.base_id)) { alert('Это чужая коллекция'); return; }
-    const today = getLocalDateStr(new Date());
-    f.last_watering = today;
-    state.history.push({ id: 'hist_' + generateUUID(), flower_id: f.id, date: today, type: 'watering', notes: 'Полив' });
-    saveState();
-    renderDetail();
-    renderAll();
-    renderCare();
-    renderCalendar();
-    alert('✅ Полив отмечен!');
-}
-
-function detailFertilizeNow() {
-    const f = getFlower(state.detailFlowerId);
-    if (!f) return;
-    if (!isBaseEditable(f.base_id)) { alert('Это чужая коллекция'); return; }
-    const today = getLocalDateStr(new Date());
-    f.last_fertilizing = today;
-    state.history.push({ id: 'hist_' + generateUUID(), flower_id: f.id, date: today, type: 'fertilizing', notes: 'Подкормка' });
-    saveState();
-    renderDetail();
-    renderAll();
-    renderCare();
-    renderCalendar();
-    alert('✅ Подкормка отмечена!');
-}
-
-function deleteFlower() {
-    if (!confirm('❌ Удалить это растение?')) return;
-    const f = getFlower(state.detailFlowerId);
-    if (!f) return;
-    if (!isBaseEditable(f.base_id)) { alert('Это чужая коллекция'); return; }
-    state.flowers = state.flowers.filter(fl => fl.id !== f.id);
-    state.history = state.history.filter(h => h.flower_id !== f.id);
-    saveState();
-    closeDetailModal();
-    renderAll();
-    renderCare();
-    renderCalendar();
-    alert('✅ Растение удалено');
-}
-
-function showCloneModal() {
-    const myBases = state.bases.filter(b => b.owner === 'Вы');
-    if (myBases.length === 0) { alert('У вас нет своих коллекций'); return; }
-    const select = document.getElementById('cloneBaseSelect');
-    select.innerHTML = myBases.map(b => `<option value="${b.id}">${b.icon} ${getBaseDisplayName(b)}</option>`).join('');
-    document.getElementById('cloneModal').classList.add('show');
-}
-
-function closeCloneModal() {
-    document.getElementById('cloneModal').classList.remove('show');
-}
-
-function executeClone() {
-    const targetBaseId = document.getElementById('cloneBaseSelect').value;
-    const original = getFlower(state.detailFlowerId);
-    if (!original) return;
-
-    const today = new Date().toISOString().split('T')[0];
-
-    const clone = {
-        id: 'flower_' + generateUUID(),
-        catalog_id: original.catalog_id,
-        base_id: targetBaseId,
-        source_type: 'cloned',
-        name: original.name || original.catalog_name || 'Растение',
-        latin_name: original.latin_name || '',
-        placement: original.placement || '—',
-        planting_date: original.planting_date || new Date().toISOString().slice(0, 7),
-        photo: null,
-        condition: original.condition || 'Хорошее',
-        light: original.light || 'Рассеянный свет',
-        watering_summer: original.watering_summer || 3,
-        watering_winter: original.watering_winter || 7,
-        fertilizing: original.fertilizing || 30,
-        fertilizing_start: original.fertilizing_start || 3,
-        fertilizing_end: original.fertilizing_end || 10,
-        repot_interval: original.repot_interval || 2,
-        last_watering: today,
-        last_fertilizing: today,
-        last_repotting: today,
-        notes: original.notes || '(клон)',
-        catalog_name: original.catalog_name || original.name || 'Растение',
-        catalog_icon: original.catalog_icon || '🌿',
-        catalog_description: original.catalog_description || '',
-        createdAt: new Date().toISOString()
+function saveProfile() {
+    state.user.name = document.getElementById('profileNameInput').value.trim() || 'Вы';
+    state.user.email = document.getElementById('profileEmailInput').value.trim();
+    state.user.notifications = {
+        push: document.getElementById('notifPush').checked,
+        email: document.getElementById('notifEmail').checked,
     };
-
-    state.flowers.push(clone);
-
-    state.history.push({
-        id: 'hist_' + generateUUID(),
-        flower_id: clone.id,
-        date: today,
-        type: 'watering',
-        notes: 'Клон'
-    });
-    if (clone.fertilizing > 0) {
-        state.history.push({
-            id: 'hist_' + generateUUID(),
-            flower_id: clone.id,
-            date: today,
-            type: 'fertilizing',
-            notes: 'Клон'
-        });
-    }
-    state.history.push({
-        id: 'hist_' + generateUUID(),
-        flower_id: clone.id,
-        date: today,
-        type: 'repotting',
-        notes: 'Клон'
-    });
-
     saveState();
-    closeCloneModal();
-    renderAll();
-    renderCare();
-    renderCalendar();
-    alert('✅ Клон создан в коллекции "' + getBaseDisplayName(getBase(targetBaseId)) + '"');
+    updateAvatarDisplay();
 }
 
-function handleFlowerPhotoUpload(flowerId) {
-    const f = getFlower(flowerId);
-    if (!f) return;
-    if (!isBaseEditable(f.base_id)) {
-        alert('Это чужая коллекция, вы не можете менять фото.');
-        return;
-    }
-    const input = document.getElementById('flowerPhotoInput');
-    const file = input.files[0];
-    if (!file) return;
+function loadProfile() {
+    document.getElementById('profileNameInput').value = state.user.name || 'Вы';
+    document.getElementById('profileEmailInput').value = state.user.email || '';
+    document.getElementById('notifPush').checked = state.user.notifications?.push ?? true;
+    document.getElementById('notifEmail').checked = state.user.notifications?.email ?? false;
+    updateAvatarDisplay();
+}
 
+function updateAvatarDisplay() {
+    const letterEl = document.getElementById('avatarLetter');
+    const imgEl = document.getElementById('avatarImage');
+    if (state.user.avatar) {
+        letterEl.style.display = 'none';
+        imgEl.style.display = 'block';
+        imgEl.src = state.user.avatar;
+    } else {
+        letterEl.style.display = 'block';
+        imgEl.style.display = 'none';
+        const name = state.user.name || 'Вы';
+        letterEl.textContent = name.charAt(0).toUpperCase();
+    }
+}
+
+function handleAvatarUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
     const reader = new FileReader();
     reader.onload = function(e) {
         const img = new Image();
         img.onload = function() {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-            const size = 600;
+            const size = 200;
             canvas.width = size;
             canvas.height = size;
             ctx.drawImage(img, 0, 0, size, size);
             const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-
-            const flower = getFlower(flowerId);
-            if (flower) {
-                flower.photo = dataUrl;
-                saveState();
-                renderDetail();
-                renderAll();
-                renderCare();
-                renderCalendar();
-                alert('✅ Фото добавлено!');
-            }
+            state.user.avatar = dataUrl;
+            saveState();
+            updateAvatarDisplay();
         };
         img.src = e.target.result;
     };
     reader.readAsDataURL(file);
-    input.value = '';
+    event.target.value = '';
+}
+
+function showDisplaySettingsModal() {
+    const settings = state.user.display_settings || {};
+    document.getElementById('settingsPlacement').checked = settings.show_placement !== undefined ? settings.show_placement : true;
+    document.getElementById('settingsCondition').checked = settings.show_condition !== undefined ? settings.show_condition : true;
+    document.getElementById('settingsLight').checked = settings.show_light !== undefined ? settings.show_light : true;
+    document.getElementById('settingsWatering').checked = settings.show_watering !== undefined ? settings.show_watering : true;
+    document.getElementById('settingsFertilizing').checked = settings.show_fertilizing !== undefined ? settings.show_fertilizing : true;
+    document.getElementById('settingsLatinName').checked = settings.show_latin_name || false;
+    document.getElementById('settingsPlantingDate').checked = settings.show_planting_date || false;
+    document.getElementById('settingsFertilizingPeriod').checked = settings.show_fertilizing_period || false;
+    document.getElementById('settingsLastRepotting').checked = settings.show_last_repotting || false;
+    document.getElementById('settingsNotes').checked = settings.show_notes || false;
+    document.getElementById('settingsCareInfo').checked = settings.show_care_info || false;
+    document.getElementById('displaySettingsModal').classList.add('show');
+}
+
+function closeDisplaySettingsModal() {
+    document.getElementById('displaySettingsModal').classList.remove('show');
+}
+
+function saveDisplaySettings() {
+    state.user.display_settings = {
+        show_placement: document.getElementById('settingsPlacement').checked,
+        show_condition: document.getElementById('settingsCondition').checked,
+        show_light: document.getElementById('settingsLight').checked,
+        show_watering: document.getElementById('settingsWatering').checked,
+        show_fertilizing: document.getElementById('settingsFertilizing').checked,
+        show_latin_name: document.getElementById('settingsLatinName').checked,
+        show_planting_date: document.getElementById('settingsPlantingDate').checked,
+        show_fertilizing_period: document.getElementById('settingsFertilizingPeriod').checked,
+        show_last_repotting: document.getElementById('settingsLastRepotting').checked,
+        show_notes: document.getElementById('settingsNotes').checked,
+        show_care_info: document.getElementById('settingsCareInfo').checked,
+    };
+    saveState();
+    if (state.detailFlowerId) {
+        renderDetail();
+    }
+}
+
+function exportAllData() {
+    const data = { bases: state.bases, flowers: state.flowers, history: state.history, user: state.user };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'all_data_' + new Date().toISOString().split('T')[0] + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function importAllData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            if (data.bases && data.flowers) {
+                state.bases = data.bases;
+                state.flowers = data.flowers;
+                state.history = data.history || [];
+                state.user = data.user || {
+                    name: 'Вы',
+                    email: '',
+                    avatar: null,
+                    notifications: { push: true, email: false },
+                    display_settings: {
+                        show_placement: true,
+                        show_condition: true,
+                        show_light: true,
+                        show_watering: true,
+                        show_fertilizing: true,
+                        show_latin_name: false,
+                        show_planting_date: false,
+                        show_fertilizing_period: false,
+                        show_last_repotting: false,
+                        show_notes: false,
+                        show_care_info: false,
+                    }
+                };
+                saveState();
+                renderAll();
+                renderCare();
+                renderCalendar();
+                alert('✅ Данные успешно импортированы!');
+            } else {
+                alert('❌ Неверный формат файла');
+            }
+        } catch (err) {
+            alert('❌ Ошибка чтения файла: ' + err.message);
+        }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+}
+
+function getLogs() {
+    try {
+        const raw = localStorage.getItem('appLogs');
+        return raw ? JSON.parse(raw) : [];
+    } catch (e) { return []; }
+}
+
+function exportLogs() {
+    const logs = getLogs();
+    if (logs.length === 0) {
+        alert('Логи пусты');
+        return;
+    }
+    const data = JSON.stringify(logs, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'phytonote_logs_' + new Date().toISOString().split('T')[0] + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
 }

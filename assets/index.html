@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>PhytoNote 🌿</title>
     
-    <!-- PWA -->
+    <!-- ================================================================
+    PWA (Progressive Web App)
+    ================================================================ -->
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -65,11 +67,7 @@
             <div id="basesList">
                 <button class="btn" onclick="showCreateBaseModal()">➕ Создать коллекцию</button>
                 <div id="basesContainer" style="margin-top:10px;"></div>
-                <div style="margin-top:16px; display:flex; gap:8px; flex-wrap:wrap;">
-                    <button class="btn btn-outline" style="flex:1;" onclick="showExportBaseModal()">📤 Экспорт коллекции</button>
-                    <button class="btn btn-outline" style="flex:1;" onclick="document.getElementById('importBaseInput').click()">📥 Импорт коллекции</button>
-                    <input type="file" id="importBaseInput" accept=".json" style="display:none" onchange="importBase(event)">
-                </div>
+                <!-- ИМПОРТ/ЭКСПОРТ УБРАНЫ! -->
             </div>
             <div id="basePlantsView" style="display:none;">
                 <button class="btn btn-outline" onclick="backToBases()" style="margin-bottom:10px;">← Назад к коллекциям</button>
@@ -143,34 +141,43 @@
             <button class="btn btn-outline" onclick="showDisplaySettingsModal()">⚙️ Настройка карточки растения</button>
         </div>
 
+        <!-- ============================================================
+        НОВЫЙ РАЗДЕЛ: УПРАВЛЕНИЕ ДАННЫМИ
+        ============================================================ -->
         <div style="margin-top:16px;">
-            <div style="font-weight:600;margin-bottom:6px;">📚 Управление каталогом</div>
-            <div class="profile-item">
-                <span class="label">📊 Статус</span>
-                <span class="value" id="catalogStatus">Не загружен</span>
+            <div style="font-weight:600;margin-bottom:6px;">📂 Управление данными</div>
+            
+            <!-- КАТАЛОГ -->
+            <div style="margin-bottom:8px;">
+                <div style="font-size:13px;font-weight:500;color:#2d4a2d;margin-bottom:4px;">📚 Каталог растений</div>
+                <div class="profile-item" style="margin-bottom:4px;">
+                    <span class="label">📊 Статус</span>
+                    <span class="value" id="catalogStatus">Не загружен</span>
+                </div>
+                <button class="btn btn-outline" onclick="document.getElementById('importCatalogInput').click()" style="margin-top:2px;">📥 Импортировать каталог</button>
+                <input type="file" id="importCatalogInput" accept=".json" style="display:none" onchange="importCatalog(event)">
+                <button class="btn btn-outline" onclick="exportCatalog()" style="margin-top:2px;">📤 Экспортировать каталог</button>
+                <button class="btn btn-danger" onclick="clearCatalog()" style="margin-top:2px;">🗑 Очистить каталог</button>
             </div>
-            <button class="btn btn-outline" onclick="document.getElementById('importCatalogInput').click()">📥 Импортировать каталог</button>
-            <input type="file" id="importCatalogInput" accept=".json" style="display:none" onchange="importCatalog(event)">
-            <button class="btn btn-outline" onclick="exportCatalog()">📤 Экспортировать каталог</button>
-            <button class="btn btn-danger" onclick="clearCatalog()">🗑 Очистить каталог</button>
-        </div>
-        <div style="margin-top:16px;">
-            <div style="font-weight:600;margin-bottom:6px;">🔔 Уведомления</div>
-            <div class="profile-item">
-                <span class="label">📱 Push-уведомления</span>
-                <input type="checkbox" id="notifPush" onchange="saveProfile()">
+            
+            <!-- КОЛЛЕКЦИИ -->
+            <div style="margin-bottom:8px;border-top:1px solid #eef3ee;padding-top:8px;">
+                <div style="font-size:13px;font-weight:500;color:#2d4a2d;margin-bottom:4px;">🌱 Коллекции</div>
+                <button class="btn btn-outline" onclick="showExportBaseModal()" style="margin-top:2px;">📤 Экспортировать коллекцию</button>
+                <button class="btn btn-outline" onclick="document.getElementById('importBaseInput').click()" style="margin-top:2px;">📥 Импортировать коллекцию</button>
+                <input type="file" id="importBaseInput" accept=".json" style="display:none" onchange="importBase(event)">
             </div>
-            <div class="profile-item">
-                <span class="label">📧 На почту</span>
-                <input type="checkbox" id="notifEmail" onchange="saveProfile()">
+            
+            <!-- ВСЕ ДАННЫЕ -->
+            <div style="border-top:1px solid #eef3ee;padding-top:8px;">
+                <div style="font-size:13px;font-weight:500;color:#2d4a2d;margin-bottom:4px;">💾 Все данные</div>
+                <button class="btn btn-outline" onclick="exportAllData()" style="margin-top:2px;">📤 Экспорт всех данных</button>
+                <button class="btn btn-outline" onclick="document.getElementById('importAllInput').click()" style="margin-top:2px;">📥 Импорт всех данных</button>
+                <input type="file" id="importAllInput" accept=".json" style="display:none" onchange="importAllData(event)">
+                <button class="btn btn-danger" onclick="if(confirm('Удалить ВСЕ данные?')){localStorage.clear();location.reload();}" style="margin-top:2px;">🗑 Сбросить все данные</button>
             </div>
         </div>
-        <div style="margin-top:16px;">
-            <button class="btn btn-outline" onclick="exportAllData()">📤 Экспорт всех данных</button>
-            <button class="btn btn-outline" onclick="document.getElementById('importAllInput').click()">📥 Импорт всех данных</button>
-            <input type="file" id="importAllInput" accept=".json" style="display:none" onchange="importAllData(event)">
-            <button class="btn btn-danger" onclick="if(confirm('Удалить ВСЕ данные?')){localStorage.clear();location.reload();}">🗑 Сбросить все данные</button>
-        </div>
+
         <div class="coming-soon" style="margin-top:20px;border-top:1px solid #eef3ee;padding-top:16px;">
             <span class="icon-big">🚀</span>
             <p style="font-weight:500;">Многопользовательский режим</p>
@@ -321,9 +328,8 @@
 
     <!-- Детальный просмотр -->
     <div class="modal-overlay" id="detailModal">
-        <div class="modal-content" style="padding: 0 0 10px 0;">
+        <div class="modal-content" style="padding: 0 0 0 0;">
             <div id="detailBody" class="modal-scroll"></div>
-            <button class="btn btn-outline" style="margin: 8px 20px 10px 20px; width: calc(100% - 40px); flex-shrink: 0;" onclick="closeDetailModal()">Закрыть</button>
         </div>
     </div>
 
@@ -348,7 +354,7 @@
             <div class="modal-scroll">
                 <div style="padding: 0 20px;">
                     <p style="font-size:14px;color:#5c725c;margin-bottom:12px;">Выберите параметры, которые будут всегда видны в карточке</p>
-                    <p style="font-size:13px;color:#8aa08a;margin-bottom:12px;">Остальные параметры можно будет развернуть кнопкой «Развернуть все параметры»</p>
+                    <p style="font-size:13px;color:#8aa08a;margin-bottom:12px;">Остальные параметры можно будет развернуть кнопкой «Развернуть все характеристики»</p>
                 </div>
                 <div class="settings-group" style="margin:0 20px;">
                     <div class="setting-item">
@@ -418,7 +424,7 @@
         </div>
     </div>
 
-    <!-- Экспорт коллекции -->
+    <!-- Экспорт коллекции (вызывается из профиля) -->
     <div class="modal-overlay" id="exportBaseModal">
         <div class="modal-content">
             <h2>📤 Экспорт коллекции</h2>
@@ -434,7 +440,7 @@
     </div>
 
     <!-- ================================================================
-    СКРИПТЫ
+    СКРИПТЫ (подключаем модули)
     ================================================================ -->
     <script src="js/utils.js"></script>
     <script src="js/data.js"></script>
@@ -447,12 +453,14 @@
     <script src="js/settings.js"></script>
     <script src="js/app.js"></script>
 
-    <!-- Service Worker -->
+    <!-- ================================================================
+    РЕГИСТРАЦИЯ SERVICE WORKER
+    ================================================================ -->
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js')
                 .then(() => console.log('✅ Service Worker зарегистрирован'))
-                .catch(err => console.log('❌ Ошибка SW:', err));
+                .catch(err => console.log('❌ Ошибка регистрации SW:', err));
         }
     </script>
 

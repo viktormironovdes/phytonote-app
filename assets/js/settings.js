@@ -100,6 +100,89 @@ function saveDisplaySettings() {
     }
 }
 
+// ================================================================
+// ЭКСПОРТ КОЛЛЕКЦИИ (перенесено из collections.js)
+// ================================================================
+
+function showExportBaseModal() {
+    if (state.bases.length === 0) { alert('Нет коллекций для экспорта'); return; }
+    const select = document.getElementById('exportBaseSelect');
+    select.innerHTML = state.bases.map(b => `<option value="${b.id}">${b.icon} ${getBaseDisplayName(b)}</option>`).join('');
+    document.getElementById('exportBaseModal').classList.add('show');
+}
+
+function closeExportBaseModal() {
+    document.getElementById('exportBaseModal').classList.remove('show');
+}
+
+function executeExportBase() {
+    const baseId = document.getElementById('exportBaseSelect').value;
+    const base = getBase(baseId);
+    if (!base) return;
+    const flowers = getFlowersByBase(baseId);
+    const history = state.history.filter(h => flowers.some(f => f.id === h.flower_id));
+    const data = { base, flowers, history, exportedAt: new Date().toISOString() };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `collection_${base.name}_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    closeExportBaseModal();
+}
+
+function importBase(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            if (!data.base || !data.flowers) { alert('Неверный формат'); return; }
+            if (state.bases.some(b => b.name === data.base.name && b.owner === 'Вы')) {
+                if (!confirm(`Коллекция "${data.base.name}" уже существует. Создать копию?`)) return;
+                data.base.name = data.base.name + ' (копия)';
+            }
+            const newBaseId = 'base_' + generateUUID();
+            data.base.id = newBaseId;
+            data.base.owner = 'Вы';
+            state.bases.push(data.base);
+            data.flowers.forEach(f => {
+                const newId = 'flower_' + generateUUID();
+                const oldId = f.id;
+                f.id = newId;
+                f.base_id = newBaseId;
+                if (!f.latin_name) f.latin_name = '';
+                if (!f.planting_date) f.planting_date = new Date().toISOString().slice(0, 7);
+                if (!f.fertilizing_start) f.fertilizing_start = 3;
+                if (!f.fertilizing_end) f.fertilizing_end = 10;
+                if (!f.last_repotting) f.last_repotting = new Date().toISOString().split('T')[0];
+                if (!f.catalog_name) f.catalog_name = f.name;
+                if (!f.catalog_icon) f.catalog_icon = '🌿';
+                if (!f.catalog_description) f.catalog_description = '';
+                state.flowers.push(f);
+                data.history?.forEach(h => {
+                    if (h.flower_id === oldId) {
+                        state.history.push({ ...h, id: 'hist_' + generateUUID(), flower_id: newId });
+                    }
+                });
+            });
+            saveState();
+            renderAll();
+            renderCare();
+            renderCalendar();
+            alert('✅ Коллекция импортирована');
+        } catch (err) { alert('Ошибка: ' + err.message); }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+}
+
+// ================================================================
+// ЭКСПОРТ/ИМПОРТ ВСЕХ ДАННЫХ
+// ================================================================
+
 function exportAllData() {
     const data = { bases: state.bases, flowers: state.flowers, history: state.history, user: state.user };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });

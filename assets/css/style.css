@@ -665,7 +665,7 @@ body {
 .detail-header {
     position: relative;
     background: #e4ece4;
-    border-radius: 24px 24px 0 0;
+    border-radius: 0;
     overflow: hidden;
     margin: 0;
     padding: 0;
@@ -673,8 +673,8 @@ body {
 }
 .detail-header .photo-container {
     width: 100%;
-    min-height: 120px;
-    max-height: 200px;
+    min-height: 140px;
+    max-height: 220px;
     overflow: hidden;
     display: flex;
     align-items: center;
@@ -686,17 +686,17 @@ body {
 .detail-header .photo-container img {
     width: 100%;
     height: auto;
-    max-height: 200px;
+    max-height: 220px;
     object-fit: cover;
     display: block;
 }
 .detail-header .photo-container .no-photo {
     width: 100%;
-    min-height: 120px;
+    min-height: 140px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 48px;
+    font-size: 64px;
     color: #8aa08a;
     background: #e4ece4;
 }
@@ -974,24 +974,70 @@ body {
     display: block;
 }
 
-.detail-actions-bottom {
+/* ================================================================
+   DETAIL ACTIONS (НОВЫЕ СТИЛИ)
+   ================================================================ */
+.detail-actions-main {
     display: flex;
-    flex-wrap: wrap;
     gap: 8px;
-    padding: 12px 20px 4px 20px;
-    border-top: 1px solid #eef3ee;
-    margin-top: 8px;
+    padding: 8px 20px 8px 20px;
     flex-shrink: 0;
+    border-top: 1px solid #eef3ee;
 }
-.detail-actions-bottom .btn-sm {
-    flex: 0 1 auto;
-}
-.detail-actions-bottom .btn-danger {
-    margin-left: auto;
-}
-.detail-actions-bottom .danger-spacer {
+.detail-actions-main .btn {
     flex: 1;
-    min-width: 20px;
+    padding: 14px 10px;
+    font-size: 16px;
+    font-weight: 600;
+    margin-top: 0;
+    border-radius: 12px;
+    background: #1e3a1e;
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.detail-actions-main .btn:active {
+    transform: scale(0.97);
+}
+.detail-actions-main .btn-success {
+    background: #3a7a3a;
+}
+.detail-actions-main .btn-success:active {
+    background: #2d6a2d;
+}
+
+.detail-actions-secondary {
+    display: flex;
+    gap: 8px;
+    padding: 4px 20px 12px 20px;
+    flex-shrink: 0;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+.detail-actions-secondary .btn-sm {
+    font-size: 12px;
+    padding: 4px 14px;
+    margin-top: 0;
+    border-radius: 20px;
+    color: #5c725c;
+    border: 1px solid #dce4dc;
+    background: transparent;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.detail-actions-secondary .btn-sm:active {
+    transform: scale(0.95);
+}
+.detail-actions-secondary .btn-sm:hover {
+    background: #f4f7f4;
+}
+.detail-actions-secondary .btn-sm.btn-danger {
+    color: #d9534f;
+    border-color: #f0d0d0;
+}
+.detail-actions-secondary .btn-sm.btn-danger:hover {
+    background: #fdf0f0;
 }
 
 /* ================================================================
@@ -1020,22 +1066,6 @@ body {
     margin-top: 4px;
 }
 
-/* Кликабельные элементы справки в карточке */
-.info-clickable {
-    cursor: pointer;
-    transition: background 0.2s;
-    border-radius: 6px;
-    padding: 2px 6px;
-    margin: -2px -6px;
-}
-.info-clickable:hover {
-    background: #eef3ee;
-}
-.info-clickable:active {
-    background: #dce4dc;
-}
-
-/* Стили для фактов в справке (вкладка) */
 .info-fact-item {
     background: #f8fbf8;
     border-radius: 10px;
@@ -1054,11 +1084,7 @@ body {
     display: flex;
     align-items: center;
     gap: 6px;
-}
-.info-fact-item .fact-title .more-link {
-    font-size: 12px;
-    color: #8aa08a;
-    margin-left: auto;
+    color: #1e2e1e;
 }
 .info-fact-item .fact-text {
     font-size: 13px;
@@ -1071,25 +1097,17 @@ body {
     margin-top: 4px;
 }
 
-/* Модалка для детального просмотра факта */
-.fact-detail-modal .modal-content {
-    max-height: 70vh;
+/* ================================================================
+   FULLSCREEN DETAIL MODAL
+   ================================================================ */
+#detailModal .modal-content {
+    height: 95vh;
+    max-height: 95vh;
+    border-radius: 0;
+    padding: 0;
 }
-.fact-detail-content {
-    font-size: 14px;
-    line-height: 1.6;
-    color: #1e2e1e;
-    white-space: pre-wrap;
-}
-.fact-detail-source {
-    margin-top: 12px;
-    font-size: 12px;
-    color: #8aa08a;
-}
-.fact-detail-plant {
-    margin-top: 8px;
-    font-size: 12px;
-    color: #5c725c;
+#detailModal .modal-content .modal-scroll {
+    padding-bottom: 0;
 }
 
 /* ================================================================
@@ -1145,10 +1163,6 @@ body {
         font-size: 11px;
         padding: 8px 4px;
     }
-    .detail-actions-bottom .btn-sm {
-        font-size: 10px;
-        padding: 4px 8px;
-    }
     .modal-content {
         height: 90vh;
         max-height: 90vh;
@@ -1175,5 +1189,44 @@ body {
     }
     .info-fact-item .fact-text {
         font-size: 12px;
+    }
+    .detail-actions-main .btn {
+        padding: 12px 8px;
+        font-size: 14px;
+    }
+    .detail-actions-secondary .btn-sm {
+        font-size: 11px;
+        padding: 3px 10px;
+    }
+    #detailModal .modal-content {
+        height: 100vh;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+    .detail-header .photo-container {
+        min-height: 120px;
+        max-height: 180px;
+    }
+    .detail-header .photo-container .no-photo {
+        min-height: 120px;
+        font-size: 48px;
+    }
+}
+
+@media (max-width: 380px) {
+    .detail-actions-main {
+        flex-wrap: wrap;
+    }
+    .detail-actions-main .btn {
+        flex: 1 1 30%;
+        padding: 10px 6px;
+        font-size: 12px;
+    }
+    .detail-actions-secondary {
+        gap: 4px;
+    }
+    .detail-actions-secondary .btn-sm {
+        font-size: 10px;
+        padding: 2px 8px;
     }
 }

@@ -169,6 +169,7 @@ function renderCatalog() {
 
     list.sort((a, b) => a.name.localeCompare(b.name));
 
+    // УБРАН СИМВОЛ "→"
     container.innerHTML = list.map(p => `
         <div class="card" onclick="showCatalogPreview('${p.id}')">
             <div class="avatar">${p.icon || '🌿'}</div>
@@ -176,7 +177,6 @@ function renderCatalog() {
                 <div class="title">${p.name}</div>
                 <div class="sub">${p.description ? p.description.substring(0, 60) + '...' : ''}</div>
             </div>
-            <div style="font-size:20px;">→</div>
         </div>
     `).join('') || '<div style="text-align:center;padding:30px;color:#8aa08a;">🌱 Нет растений, соответствующих фильтрам</div>';
 }
@@ -196,7 +196,6 @@ function importCatalog(event) {
                 alert('✅ Каталог версии 3.0 импортирован (' + state.catalog.plants.length + ' растений, ' + state.catalog.characteristics.length + ' характеристик)');
                 renderAll();
             } else if (data.plants) {
-                // Пробуем конвертировать старый формат
                 const converted = convertOldCatalog(data);
                 state.catalog = converted;
                 state.catalogLoaded = true;
@@ -295,7 +294,6 @@ function showCatalogPreview(catalogId) {
         factsHtml += '</div>';
     }
 
-    // Создаем overlay
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay show';
     overlay.id = 'previewModal';
@@ -348,12 +346,10 @@ function showCatalogPreview(catalogId) {
     `;
     document.body.appendChild(overlay);
 
-    // Обновляем подсказки для расположения
     setTimeout(() => {
         updateLocationSuggestionsForPreview();
     }, 100);
 
-    // Закрытие по клику на фон
     overlay.addEventListener('click', function(e) {
         if (e.target === this) {
             this.remove();
@@ -382,7 +378,6 @@ function updateLocationSuggestionsForPreview() {
         .join('');
 }
 
-// Слушаем изменение базы в превью для обновления подсказок
 document.addEventListener('change', function(e) {
     if (e.target.id === 'previewBaseSelect') {
         updateLocationSuggestionsForPreview();
@@ -413,7 +408,6 @@ function addFromCatalogPreview(catalogId) {
         base_id: baseId,
         source_type: 'catalog',
         
-        // Локальные характеристики
         name: plant.name,
         placement: document.getElementById('previewPlacement')?.value || '—',
         planting_date: document.getElementById('previewPlantingDate')?.value || currentMonth,
@@ -432,7 +426,6 @@ function addFromCatalogPreview(catalogId) {
         notes: plant.default_soil ? 'Грунт: ' + plant.default_soil : '',
         latin_name: '',
         
-        // Копия из каталога (для быстрого доступа)
         catalog_name: plant.name,
         catalog_icon: plant.icon || '🌿',
         catalog_description: plant.description || '',
@@ -467,7 +460,6 @@ function addFromCatalogPreview(catalogId) {
 
     saveState();
     
-    // Закрываем превью
     const previewModal = document.getElementById('previewModal');
     if (previewModal) previewModal.remove();
     
@@ -478,7 +470,6 @@ function addFromCatalogPreview(catalogId) {
     alert('✅ ' + plant.name + ' добавлен в коллекцию!');
 }
 
-// Обновление подсказок для расположения (глобальное)
 function updateLocationSuggestions() {
     const baseId = state.currentBaseId;
     const datalist = document.getElementById('locationSuggestions');

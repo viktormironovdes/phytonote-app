@@ -1,7 +1,3 @@
-// ================================================================
-// SERVICE WORKER (sw.js)
-// ================================================================
-
 const CACHE_NAME = 'phytonote-v1';
 const ASSETS = [
   '/',
@@ -10,13 +6,13 @@ const ASSETS = [
   '/js/app.js',
   '/js/data.js',
   '/js/ui.js',
+  '/js/utils.js',
   '/js/calendar.js',
   '/js/care.js',
   '/js/catalog.js',
   '/js/collections.js',
   '/js/flower.js',
   '/js/settings.js',
-  '/js/utils.js',
   '/manifest.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png'

@@ -85,7 +85,13 @@ function renderBasePlants() {
     const search = document.getElementById('gardenSearch').value.toLowerCase();
     const isEditable = isBaseEditable(state.currentBaseId);
     let list = getFlowersByBase(state.currentBaseId).filter(f => f.name.toLowerCase().includes(search));
-    list.sort((a, b) => a.name.localeCompare(b.name));
+    
+    // ✅ СОРТИРОВКА ПО ИМЕНИ (по умолчанию)
+    list.sort((a, b) => {
+        const nameA = (a.catalog_name || a.name || '').toLowerCase();
+        const nameB = (b.catalog_name || b.name || '').toLowerCase();
+        return nameA.localeCompare(nameB);
+    });
 
     container.innerHTML = list.map(f => {
         const status = getWateringStatus(f);

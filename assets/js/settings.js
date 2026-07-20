@@ -101,7 +101,7 @@ function saveDisplaySettings() {
 }
 
 // ================================================================
-// ЭКСПОРТ КОЛЛЕКЦИИ (перенесено из collections.js)
+// ЭКСПОРТ/ИМПОРТ КОЛЛЕКЦИЙ
 // ================================================================
 
 function showExportBaseModal() {
@@ -120,8 +120,7 @@ function executeExportBase() {
     const base = getBase(baseId);
     if (!base) return;
     const flowers = getFlowersByBase(baseId);
-    const history = state.history.filter(h => flowers.some(f => f.id === h.flower_id));
-    const data = { base, flowers, history, exportedAt: new Date().toISOString() };
+    const data = { base, flowers, exportedAt: new Date().toISOString() };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -157,16 +156,11 @@ function importBase(event) {
                 if (!f.planting_date) f.planting_date = new Date().toISOString().slice(0, 7);
                 if (!f.fertilizing_start) f.fertilizing_start = 3;
                 if (!f.fertilizing_end) f.fertilizing_end = 10;
-                if (!f.last_repotting) f.last_repotting = new Date().toISOString().split('T')[0];
                 if (!f.catalog_name) f.catalog_name = f.name;
                 if (!f.catalog_icon) f.catalog_icon = '🌿';
                 if (!f.catalog_description) f.catalog_description = '';
+                if (!f.history) f.history = [];
                 state.flowers.push(f);
-                data.history?.forEach(h => {
-                    if (h.flower_id === oldId) {
-                        state.history.push({ ...h, id: 'hist_' + generateUUID(), flower_id: newId });
-                    }
-                });
             });
             saveState();
             renderAll();
@@ -184,7 +178,7 @@ function importBase(event) {
 // ================================================================
 
 function exportAllData() {
-    const data = { bases: state.bases, flowers: state.flowers, history: state.history, user: state.user };
+    const data = { bases: state.bases, flowers: state.flowers, user: state.user };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -204,7 +198,6 @@ function importAllData(event) {
             if (data.bases && data.flowers) {
                 state.bases = data.bases;
                 state.flowers = data.flowers;
-                state.history = data.history || [];
                 state.user = data.user || {
                     name: 'Вы',
                     email: '',

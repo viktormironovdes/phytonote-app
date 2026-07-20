@@ -67,7 +67,6 @@
             <div id="basesList">
                 <button class="btn" onclick="showCreateBaseModal()">➕ Создать коллекцию</button>
                 <div id="basesContainer" style="margin-top:10px;"></div>
-                <!-- ИМПОРТ/ЭКСПОРТ УБРАНЫ! -->
             </div>
             <div id="basePlantsView" style="display:none;">
                 <button class="btn btn-outline" onclick="backToBases()" style="margin-bottom:10px;">← Назад к коллекциям</button>
@@ -141,13 +140,10 @@
             <button class="btn btn-outline" onclick="showDisplaySettingsModal()">⚙️ Настройка карточки растения</button>
         </div>
 
-        <!-- ============================================================
-        НОВЫЙ РАЗДЕЛ: УПРАВЛЕНИЕ ДАННЫМИ
-        ============================================================ -->
+        <!-- УПРАВЛЕНИЕ ДАННЫМИ -->
         <div style="margin-top:16px;">
             <div style="font-weight:600;margin-bottom:6px;">📂 Управление данными</div>
             
-            <!-- КАТАЛОГ -->
             <div style="margin-bottom:8px;">
                 <div style="font-size:13px;font-weight:500;color:#2d4a2d;margin-bottom:4px;">📚 Каталог растений</div>
                 <div class="profile-item" style="margin-bottom:4px;">
@@ -160,7 +156,6 @@
                 <button class="btn btn-danger" onclick="clearCatalog()" style="margin-top:2px;">🗑 Очистить каталог</button>
             </div>
             
-            <!-- КОЛЛЕКЦИИ -->
             <div style="margin-bottom:8px;border-top:1px solid #eef3ee;padding-top:8px;">
                 <div style="font-size:13px;font-weight:500;color:#2d4a2d;margin-bottom:4px;">🌱 Коллекции</div>
                 <button class="btn btn-outline" onclick="showExportBaseModal()" style="margin-top:2px;">📤 Экспортировать коллекцию</button>
@@ -168,7 +163,6 @@
                 <input type="file" id="importBaseInput" accept=".json" style="display:none" onchange="importBase(event)">
             </div>
             
-            <!-- ВСЕ ДАННЫЕ -->
             <div style="border-top:1px solid #eef3ee;padding-top:8px;">
                 <div style="font-size:13px;font-weight:500;color:#2d4a2d;margin-bottom:4px;">💾 Все данные</div>
                 <button class="btn btn-outline" onclick="exportAllData()" style="margin-top:2px;">📤 Экспорт всех данных</button>
@@ -185,7 +179,6 @@
             <button class="btn btn-outline" style="margin-top:8px;max-width:200px;margin-left:auto;margin-right:auto;" onclick="alert('🚀 В разработке!')">🔒 Управление коллекциями</button>
         </div>
 
-        <!-- Отладочная информация -->
         <div class="debug-info">
             <div>🕒 Текущее время:</div>
             <div class="time" id="debugTime">--:--:--</div>
@@ -309,12 +302,6 @@
                     <label>🔄 Пересадка (годы)</label>
                     <input id="fRepot" type="number" min="1" value="2">
 
-                    <label>📅 Дата последней пересадки</label>
-                    <input id="fLastRepotting" type="date">
-
-                    <label>📖 Справка о растении</label>
-                    <textarea id="fCareInfo" placeholder="Историческая справка, родина, селекция..."></textarea>
-
                     <label>📝 Примечания</label>
                     <textarea id="fNotes" placeholder="Любит опрыскивание..."></textarea>
                 </div>
@@ -424,7 +411,7 @@
         </div>
     </div>
 
-    <!-- Экспорт коллекции (вызывается из профиля) -->
+    <!-- Экспорт коллекции -->
     <div class="modal-overlay" id="exportBaseModal">
         <div class="modal-content">
             <h2>📤 Экспорт коллекции</h2>

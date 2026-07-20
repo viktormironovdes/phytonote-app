@@ -182,22 +182,15 @@ function doCareAction(flowerId, type) {
     }
     const today = getLocalDateStr(new Date());
     const actionName = type === 'watering' ? 'Полив' : 'Подкормка';
-    const field = type === 'watering' ? 'last_watering' : 'last_fertilizing';
 
-    if (f[field] === today) {
+    // Проверяем, не было ли уже события сегодня
+    const existing = (f.history || []).some(h => h.date === today && h.type === type);
+    if (existing) {
         alert(`${actionName} уже отмечен сегодня.`);
         return;
     }
 
-    f[field] = today;
-    state.history.push({
-        id: 'hist_' + generateUUID(),
-        flower_id: f.id,
-        date: today,
-        type: type,
-        notes: `${actionName} (из раздела "Уход")`
-    });
-
+    addHistoryEvent(f, type, today, `${actionName} (из раздела "Уход")`);
     saveState();
     renderCare();
     renderAll();

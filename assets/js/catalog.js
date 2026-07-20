@@ -11,7 +11,6 @@ function loadCatalog() {
                 state.catalog = parsed;
                 state.catalogLoaded = true;
             } else {
-                // Пытаемся преобразовать старый формат
                 state.catalog = convertOldCatalog(parsed);
                 state.catalogLoaded = true;
             }
@@ -25,8 +24,6 @@ function loadCatalog() {
     }
     updateCatalogStatus();
     renderCatalog();
-    // Синхронизируем растения с каталогом
-    syncAllFlowersWithCatalog();
 }
 
 function saveCatalogToStorage() {
@@ -36,7 +33,6 @@ function saveCatalogToStorage() {
 }
 
 function convertOldCatalog(oldData) {
-    // Конвертация из версии 2.0 в 3.0
     const characteristics = [
         { id: 'watering', name: 'Полив', icon: '💧' },
         { id: 'lighting', name: 'Освещение', icon: '☀️' },
@@ -169,7 +165,6 @@ function renderCatalog() {
 
     list.sort((a, b) => a.name.localeCompare(b.name));
 
-    // УБРАН СИМВОЛ "→"
     container.innerHTML = list.map(p => `
         <div class="card" onclick="showCatalogPreview('${p.id}')">
             <div class="avatar">${p.icon || '🌿'}</div>
@@ -192,15 +187,13 @@ function importCatalog(event) {
                 state.catalog = data;
                 state.catalogLoaded = true;
                 saveCatalogToStorage();
-                syncAllFlowersWithCatalog();
-                alert('✅ Каталог версии 3.0 импортирован (' + state.catalog.plants.length + ' растений, ' + state.catalog.characteristics.length + ' характеристик)');
+                alert('✅ Каталог версии 3.0 импортирован (' + state.catalog.plants.length + ' растений)');
                 renderAll();
             } else if (data.plants) {
                 const converted = convertOldCatalog(data);
                 state.catalog = converted;
                 state.catalogLoaded = true;
                 saveCatalogToStorage();
-                syncAllFlowersWithCatalog();
                 alert('✅ Старый каталог преобразован в версию 3.0 (' + state.catalog.plants.length + ' растений)');
                 renderAll();
             } else {
@@ -271,7 +264,6 @@ function showCatalogPreview(catalogId) {
     const today = new Date().toISOString().split('T')[0];
     const currentMonth = new Date().toISOString().slice(0, 7);
 
-    // Формируем информацию о растении
     let factsHtml = '';
     if (plant.facts && plant.facts.length > 0) {
         const charMap = {};
@@ -329,15 +321,6 @@ function showCatalogPreview(catalogId) {
 
                     <label style="font-weight:600;display:block;margin-bottom:4px;">🌱 Дата посадки (месяц-год):</label>
                     <input id="previewPlantingDate" type="month" value="${currentMonth}" style="width:100%;padding:10px;border-radius:12px;border:1px solid #dce4dc;margin-bottom:8px;font-size:14px;">
-
-                    <label style="font-weight:600;display:block;margin-bottom:4px;">📅 Последний полив:</label>
-                    <input id="previewLastWatering" type="date" value="${today}" style="width:100%;padding:10px;border-radius:12px;border:1px solid #dce4dc;margin-bottom:8px;font-size:14px;" max="${today}">
-
-                    <label style="font-weight:600;display:block;margin-bottom:4px;">🧪 Последняя подкормка:</label>
-                    <input id="previewLastFertilizing" type="date" value="${today}" style="width:100%;padding:10px;border-radius:12px;border:1px solid #dce4dc;margin-bottom:8px;font-size:14px;" max="${today}">
-
-                    <label style="font-weight:600;display:block;margin-bottom:4px;">🔄 Последняя пересадка:</label>
-                    <input id="previewLastRepotting" type="date" value="${today}" style="width:100%;padding:10px;border-radius:12px;border:1px solid #dce4dc;margin-bottom:8px;font-size:14px;" max="${today}">
 
                     <button class="btn" onclick="addFromCatalogPreview('${plant.id}')" style="margin-top:4px;">➕ Добавить в коллекцию</button>
                 </div>
@@ -399,7 +382,7 @@ function addFromCatalogPreview(catalogId) {
         return;
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateStr(new Date());
     const currentMonth = new Date().toISOString().slice(0, 7);
 
     const flower = {
@@ -420,9 +403,6 @@ function addFromCatalogPreview(catalogId) {
         fertilizing_start: 3,
         fertilizing_end: 10,
         repot_interval: plant.default_repot_interval || 2,
-        last_watering: document.getElementById('previewLastWatering')?.value || today,
-        last_fertilizing: document.getElementById('previewLastFertilizing')?.value || today,
-        last_repotting: document.getElementById('previewLastRepotting')?.value || today,
         notes: plant.default_soil ? 'Грунт: ' + plant.default_soil : '',
         latin_name: '',
         
@@ -430,34 +410,13 @@ function addFromCatalogPreview(catalogId) {
         catalog_icon: plant.icon || '🌿',
         catalog_description: plant.description || '',
         
+        // ← ИСТОРИЯ ПУСТАЯ, БУДЕТ ЗАПОЛНЯТЬСЯ ПРИ ДЕЙСТВИЯХ
+        history: [],
+        
         createdAt: new Date().toISOString()
     };
 
     state.flowers.push(flower);
-    state.history.push({
-        id: 'hist_' + generateUUID(),
-        flower_id: flower.id,
-        date: flower.last_watering,
-        type: 'watering',
-        notes: 'Добавлено из каталога'
-    });
-    if (flower.fertilizing > 0) {
-        state.history.push({
-            id: 'hist_' + generateUUID(),
-            flower_id: flower.id,
-            date: flower.last_fertilizing,
-            type: 'fertilizing',
-            notes: 'Добавлено из каталога'
-        });
-    }
-    state.history.push({
-        id: 'hist_' + generateUUID(),
-        flower_id: flower.id,
-        date: flower.last_repotting,
-        type: 'repotting',
-        notes: 'Добавлено из каталога'
-    });
-
     saveState();
     
     const previewModal = document.getElementById('previewModal');

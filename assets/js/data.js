@@ -3,29 +3,18 @@
 // ================================================================
 
 let state = {
-    // КОЛЛЕКЦИИ (локальные)
     bases: [],
-    
-    // РАСТЕНИЯ В КОЛЛЕКЦИЯХ (локальные экземпляры)
     flowers: [],
-    
-    // ИСТОРИЯ УХОДА
-    history: [],
-    
-    // КАТАЛОГ (глобальный справочник)
     catalog: {
         version: '3.0',
         characteristics: [],
         plants: []
     },
-    
-    // ПОЛЬЗОВАТЕЛЬ
     user: {
         name: 'Вы',
         email: '',
         avatar: null,
         notifications: { push: true, email: false },
-        // Настройки: какие характеристики показывать в основном блоке
         display_settings: {
             show_placement: true,
             show_condition: true,
@@ -40,8 +29,6 @@ let state = {
             show_care_info: false,
         }
     },
-    
-    // ТЕКУЩЕЕ СОСТОЯНИЕ
     currentBaseId: null,
     currentPage: 'care',
     detailFlowerId: null,
@@ -49,14 +36,8 @@ let state = {
     isExpanded: false,
     selectedCalendarDate: null,
     detailTab: 'main',
-    
-    // ФАЙЛЫ ДАННЫХ
     catalogLoaded: false,
 };
-
-// ================================================================
-// БАЗОВЫЕ ФУНКЦИИ
-// ================================================================
 
 function loadState() {
     try {
@@ -65,7 +46,6 @@ function loadState() {
             const data = JSON.parse(raw);
             state.bases = data.bases || [];
             state.flowers = data.flowers || [];
-            state.history = data.history || [];
             state.user = data.user || {
                 name: 'Вы',
                 email: '',
@@ -100,17 +80,70 @@ function loadState() {
                     show_care_info: false,
                 };
             }
+            
+            // Миграция: если есть старые поля last_*, переносим в историю
+            state.flowers.forEach(flower => {
+                if (!flower.history) flower.history = [];
+                
+                // Переносим last_watering
+                if (flower.last_watering) {
+                    const hasEvent = flower.history.some(h => 
+                        h.type === 'watering' && h.date === flower.last_watering
+                    );
+                    if (!hasEvent) {
+                        flower.history.push({
+                            id: 'hist_' + generateUUID(),
+                            date: flower.last_watering,
+                            type: 'watering',
+                            notes: 'Перенесено из старых данных'
+                        });
+                    }
+                    delete flower.last_watering;
+                }
+                
+                // Переносим last_fertilizing
+                if (flower.last_fertilizing) {
+                    const hasEvent = flower.history.some(h => 
+                        h.type === 'fertilizing' && h.date === flower.last_fertilizing
+                    );
+                    if (!hasEvent) {
+                        flower.history.push({
+                            id: 'hist_' + generateUUID(),
+                            date: flower.last_fertilizing,
+                            type: 'fertilizing',
+                            notes: 'Перенесено из старых данных'
+                        });
+                    }
+                    delete flower.last_fertilizing;
+                }
+                
+                // Переносим last_repotting
+                if (flower.last_repotting) {
+                    const hasEvent = flower.history.some(h => 
+                        h.type === 'repotting' && h.date === flower.last_repotting
+                    );
+                    if (!hasEvent) {
+                        flower.history.push({
+                            id: 'hist_' + generateUUID(),
+                            date: flower.last_repotting,
+                            type: 'repotting',
+                            notes: 'Перенесено из старых данных'
+                        });
+                    }
+                    delete flower.last_repotting;
+                }
+            });
         } else {
             initDemoData();
         }
     } catch (e) { initDemoData(); }
+    saveState();
 }
 
 function saveState() {
     const data = {
         bases: state.bases,
         flowers: state.flowers,
-        history: state.history,
         user: state.user,
     };
     localStorage.setItem('flowerAppState', JSON.stringify(data));
@@ -120,7 +153,6 @@ function saveState() {
 function initDemoData() {
     state.bases = [];
     state.flowers = [];
-    state.history = [];
     state.user = {
         name: 'Вы',
         email: '',
@@ -146,7 +178,6 @@ function initDemoData() {
 function getBase(id) { return state.bases.find(b => b.id === id); }
 function getFlower(id) { return state.flowers.find(f => f.id === id); }
 function getFlowersByBase(baseId) { return state.flowers.filter(f => f.base_id === baseId); }
-function getHistoryByFlower(flowerId) { return state.history.filter(h => h.flower_id === flowerId).sort((a, b) => a.date.localeCompare(b.date)); }
 
 function isBaseEditable(baseId) {
     const base = getBase(baseId);
@@ -157,6 +188,35 @@ function getBaseDisplayName(base) {
     if (!base) return '—';
     if (base.my_name && base.owner !== 'Вы') return base.my_name;
     return base.name;
+}
+
+function getHistoryByFlower(flowerId) {
+    const flower = getFlower(flowerId);
+    if (!flower || !flower.history) return [];
+    return flower.history.sort((a, b) => b.date.localeCompare(a.date));
+}
+
+function addHistoryEvent(flower, type, date, notes = '') {
+    if (!flower.history) flower.history = [];
+    flower.history.push({
+        id: 'hist_' + generateUUID(),
+        date: date || getLocalDateStr(new Date()),
+        type: type,
+        notes: notes || ''
+    });
+    flower.history.sort((a, b) => b.date.localeCompare(a.date));
+}
+
+function updateHistoryEvent(flower, eventId, newDate, newNotes) {
+    const event = flower.history.find(h => h.id === eventId);
+    if (event) {
+        if (newDate) event.date = newDate;
+        if (newNotes !== undefined) event.notes = newNotes;
+    }
+}
+
+function deleteHistoryEvent(flower, eventId) {
+    flower.history = flower.history.filter(h => h.id !== eventId);
 }
 
 // ================================================================
@@ -182,33 +242,6 @@ function getPlantFacts(flower) {
     return catalogPlant.facts;
 }
 
-function getFactForCharacteristic(flower, characteristicId) {
-    const facts = getPlantFacts(flower);
-    return facts.find(f => f.characteristic_id === characteristicId);
-}
-
 function isCatalogLoaded() {
     return state.catalog.plants && state.catalog.plants.length > 0;
-}
-
-function syncFlowerWithCatalog(flower) {
-    const catalogPlant = getCatalogPlant(flower.catalog_id);
-    if (catalogPlant) {
-        // Обновляем справочную информацию из каталога
-        flower.catalog_name = catalogPlant.name;
-        flower.catalog_icon = catalogPlant.icon;
-        flower.catalog_description = catalogPlant.description || '';
-        // Не трогаем локальные характеристики
-        return true;
-    }
-    return false;
-}
-
-function syncAllFlowersWithCatalog() {
-    let updated = 0;
-    state.flowers.forEach(flower => {
-        if (syncFlowerWithCatalog(flower)) updated++;
-    });
-    if (updated > 0) saveState();
-    return updated;
 }

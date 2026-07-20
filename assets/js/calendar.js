@@ -31,42 +31,40 @@ function renderCalendar() {
         state.flowers.forEach(f => {
             if (!isBaseEditable(f.base_id)) return;
 
-            const doneEvents = state.history.filter(h =>
+            // Проверяем выполненные события из истории
+            const doneEvents = (f.history || []).filter(h =>
                 h.date === dateStr &&
-                h.flower_id === f.id &&
-                h.type === 'watering'
+                (h.type === 'watering' || h.type === 'fertilizing')
             );
             if (doneEvents.length > 0) {
                 hasDone = true;
             }
 
+            // Проверяем запланированные события
             if (dateStr >= todayStr) {
+                // Полив
                 const nextWateringDate = getNextWateringDate(f);
                 const nextWateringStr = getLocalDateStr(nextWateringDate);
-
                 let effectiveDateStr = nextWateringStr;
-                if (dateStr === todayStr && nextWateringDate < now && f.last_watering !== todayStr) {
+                if (dateStr === todayStr && nextWateringDate < now) {
                     effectiveDateStr = todayStr;
                 }
-
                 if (effectiveDateStr === dateStr) {
                     hasPlanned = true;
                 }
 
-                if (f.fertilizing > 0 && isFertilizingActive(f) && !hasPlanned) {
-                    const lastF = new Date(f.last_fertilizing || f.last_watering || Date.now());
-                    const nextF = new Date(lastF);
-                    nextF.setDate(nextF.getDate() + f.fertilizing);
-                    if (getLocalDateStr(nextF) === dateStr) {
+                // Подкормка
+                if (f.fertilizing > 0 && isFertilizingActive(f)) {
+                    const nextFertDate = getNextFertilizingDate(f);
+                    if (nextFertDate && getLocalDateStr(nextFertDate) === dateStr) {
                         hasPlanned = true;
                     }
                 }
 
-                if (f.repot_interval > 0 && f.last_repotting && !hasPlanned) {
-                    const lastR = new Date(f.last_repotting);
-                    const nextR = new Date(lastR);
-                    nextR.setFullYear(nextR.getFullYear() + f.repot_interval);
-                    if (getLocalDateStr(nextR) === dateStr) {
+                // Пересадка
+                if (f.repot_interval > 0) {
+                    const nextRepotDate = getNextRepottingDate(f);
+                    if (nextRepotDate && getLocalDateStr(nextRepotDate) === dateStr) {
                         hasPlanned = true;
                     }
                 }
@@ -112,49 +110,53 @@ function showDayEvents(dateStr) {
     state.flowers.forEach(f => {
         if (!isBaseEditable(f.base_id)) return;
 
-        const nextWateringDate = getNextWateringDate(f);
-        const nextWateringStr = getLocalDateStr(nextWateringDate);
+        // Проверяем события из истории
+        const historyEvents = (f.history || []).filter(h => h.date === dateStr);
+        historyEvents.forEach(h => {
+            events.push({ flower: f, type: h.type, date: h.date, planned: false, notes: h.notes });
+        });
+
+        // Проверяем запланированные события
         const now = new Date();
         const todayStr = getLocalDateStr(now);
-
-        let plannedDateStr = nextWateringStr;
-        if (nextWateringDate < now && f.last_watering !== todayStr) {
-            plannedDateStr = todayStr;
-        }
-
-        if (plannedDateStr === dateStr) {
-            events.push({ flower: f, type: 'watering', date: dateStr, planned: true });
-        }
-
-        if (f.fertilizing > 0 && isFertilizingActive(f)) {
-            const lastF = new Date(f.last_fertilizing || f.last_watering || Date.now());
-            const nextF = new Date(lastF);
-            nextF.setDate(nextF.getDate() + f.fertilizing);
-            if (getLocalDateStr(nextF) === dateStr) {
-                events.push({ flower: f, type: 'fertilizing', date: dateStr, planned: true });
+        if (dateStr >= todayStr) {
+            const nextWateringDate = getNextWateringDate(f);
+            if (getLocalDateStr(nextWateringDate) === dateStr) {
+                const hasDone = (f.history || []).some(h => 
+                    h.date === dateStr && h.type === 'watering'
+                );
+                if (!hasDone) {
+                    events.push({ flower: f, type: 'watering', date: dateStr, planned: true });
+                }
             }
-        }
 
-        if (f.repot_interval > 0 && f.last_repotting) {
-            const lastR = new Date(f.last_repotting);
-            const nextR = new Date(lastR);
-            nextR.setFullYear(nextR.getFullYear() + f.repot_interval);
-            if (getLocalDateStr(nextR) === dateStr) {
-                events.push({ flower: f, type: 'repotting', date: dateStr, planned: true });
+            if (f.fertilizing > 0 && isFertilizingActive(f)) {
+                const nextFertDate = getNextFertilizingDate(f);
+                if (nextFertDate && getLocalDateStr(nextFertDate) === dateStr) {
+                    const hasDone = (f.history || []).some(h => 
+                        h.date === dateStr && h.type === 'fertilizing'
+                    );
+                    if (!hasDone) {
+                        events.push({ flower: f, type: 'fertilizing', date: dateStr, planned: true });
+                    }
+                }
+            }
+
+            if (f.repot_interval > 0) {
+                const nextRepotDate = getNextRepottingDate(f);
+                if (nextRepotDate && getLocalDateStr(nextRepotDate) === dateStr) {
+                    const hasDone = (f.history || []).some(h => 
+                        h.date === dateStr && h.type === 'repotting'
+                    );
+                    if (!hasDone) {
+                        events.push({ flower: f, type: 'repotting', date: dateStr, planned: true });
+                    }
+                }
             }
         }
     });
 
-    const doneEvents = state.history.filter(h => h.date === dateStr && state.flowers.some(f =>
-        f.id === h.flower_id && isBaseEditable(f.base_id)
-    ));
-    doneEvents.forEach(h => {
-        const f = getFlower(h.flower_id);
-        if (f) {
-            events.push({ flower: f, type: h.type, date: h.date, planned: false, notes: h.notes });
-        }
-    });
-
+    // Сортировка: сначала выполненные, потом запланированные
     events.sort((a, b) => {
         if (a.planned === b.planned) return 0;
         return a.planned ? 1 : -1;

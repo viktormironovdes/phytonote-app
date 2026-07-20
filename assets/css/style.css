@@ -840,6 +840,10 @@ body {
     font-size: 13px;
     padding: 4px 0;
     border-bottom: 1px dashed #eef3ee;
+    align-items: center;
+}
+.history-item button {
+    margin-left: 4px;
 }
 
 .readonly-badge {
@@ -975,7 +979,7 @@ body {
 }
 
 /* ================================================================
-   DETAIL ACTIONS (НОВЫЕ СТИЛИ)
+   DETAIL ACTIONS
    ================================================================ */
 .detail-actions-main {
     display: flex;

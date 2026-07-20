@@ -2,6 +2,8 @@
 // КАТАЛОГ РАСТЕНИЙ (версия 3.0)
 // ================================================================
 
+let catalogPreviewTab = 'main';
+
 function loadCatalog() {
     try {
         const saved = localStorage.getItem('customCatalog');
@@ -236,7 +238,7 @@ function clearCatalog() {
 }
 
 // ================================================================
-// ПРЕВЬЮ КАТАЛОГА И ДОБАВЛЕНИЕ В КОЛЛЕКЦИЮ
+// ПРЕВЬЮ КАТАЛОГА (С ВКЛАДКАМИ)
 // ================================================================
 
 function showCatalogPreview(catalogId) {
@@ -257,87 +259,124 @@ function showCatalogPreview(catalogId) {
         return;
     }
     
+    catalogPreviewTab = 'main';
+    renderCatalogPreview(plant);
+    document.getElementById('catalogPreviewModal').classList.add('show');
+}
+
+function switchCatalogPreviewTab(tab) {
+    catalogPreviewTab = tab;
+    const plant = state.catalog.plants.find(p => p.id === state._previewPlantId);
+    if (plant) {
+        renderCatalogPreview(plant);
+    }
+}
+
+function renderCatalogPreview(plant) {
+    state._previewPlantId = plant.id;
+    const container = document.getElementById('catalogPreviewBody');
+    const charMap = {};
+    state.catalog.characteristics.forEach(c => charMap[c.id] = c);
+    const today = getLocalDateStr(new Date());
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    
+    const myBases = state.bases.filter(b => b.owner === 'Вы');
     const basesOptions = myBases.map(b => 
         `<option value="${b.id}">${b.icon} ${getBaseDisplayName(b)}</option>`
     ).join('');
-    
-    const today = new Date().toISOString().split('T')[0];
-    const currentMonth = new Date().toISOString().slice(0, 7);
 
-    let factsHtml = '';
-    if (plant.facts && plant.facts.length > 0) {
-        const charMap = {};
-        state.catalog.characteristics.forEach(c => charMap[c.id] = c);
-        factsHtml = '<div style="margin-top:12px;"><div style="font-weight:600;font-size:14px;margin-bottom:4px;">📖 Справка</div>';
-        plant.facts.slice(0, 3).forEach(fact => {
-            const char = charMap[fact.characteristic_id];
-            const icon = char ? char.icon : '📌';
-            factsHtml += `
-                <div style="background:#f4f7f4;border-radius:8px;padding:8px 12px;margin-bottom:6px;">
-                    <div style="font-weight:600;font-size:13px;">${icon} ${char ? char.name : 'Информация'}</div>
-                    <div style="font-size:13px;color:#2d4a2d;">${fact.short}</div>
-                    ${fact.source ? `<div style="font-size:11px;color:#8aa08a;margin-top:2px;">📚 ${fact.source}</div>` : ''}
-                </div>
-            `;
-        });
-        if (plant.facts.length > 3) {
-            factsHtml += `<div style="font-size:12px;color:#8aa08a;text-align:center;">+ еще ${plant.facts.length - 3} фактов</div>`;
-        }
-        factsHtml += '</div>';
-    }
-
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay show';
-    overlay.id = 'previewModal';
-    overlay.innerHTML = `
-        <div class="modal-content">
-            <div style="display:flex;justify-content:flex-end;padding:12px 16px 0 0;">
-                <button class="edit-toggle" onclick="document.getElementById('previewModal').remove()">✕</button>
-            </div>
-            <div class="modal-scroll" style="padding:0 20px 20px 20px;">
-                <div style="text-align:center;">
-                    <div style="font-size:48px;">${plant.icon || '🌿'}</div>
-                    <div style="font-size:20px;font-weight:700;margin:8px 0;">${plant.name}</div>
-                    <div style="font-size:14px;color:#5c725c;margin-bottom:12px;">${plant.description || ''}</div>
-                </div>
-                <div style="text-align:left;font-size:14px;background:#f4f7f4;padding:12px;border-radius:12px;">
-                    📂 Форма роста: ${plant.growth_forms ? plant.growth_forms.join(', ') : '—'}<br>
-                    ☀️ Свет: ${plant.light_needs || '—'}<br>
-                    ${plant.dangerous_pets ? '⚠️ Опасно для животных: Да' : '✅ Безопасно для животных'}<br>
-                    ${plant.dangerous_children ? '⚠️ Опасно для детей: Да' : '✅ Безопасно для детей'}<br>
-                    💧 Полив: летом ${plant.default_watering_summer || 3} дн., зимой ${plant.default_watering_winter || 7} дн.<br>
-                    🧪 Подкормка: ${plant.default_fertilizing || 30} дн.<br>
-                    🔄 Пересадка: ${plant.default_repot_interval || 2} года<br>
-                    🌱 Грунт: ${plant.default_soil || '—'}
-                </div>
-                ${factsHtml}
-                <div style="margin-top:14px;">
-                    <label style="font-weight:600;display:block;margin-bottom:4px;">Добавить в коллекцию:</label>
-                    <select id="previewBaseSelect" style="width:100%;padding:10px;border-radius:12px;border:1px solid #dce4dc;margin-bottom:8px;font-size:14px;">${basesOptions}</select>
-
-                    <label style="font-weight:600;display:block;margin-bottom:4px;">📍 Расположение:</label>
-                    <input id="previewPlacement" placeholder="Гостиная, кухня..." style="width:100%;padding:10px;border-radius:12px;border:1px solid #dce4dc;margin-bottom:8px;font-size:14px;" list="previewLocationSuggestions">
-                    <datalist id="previewLocationSuggestions"></datalist>
-
-                    <label style="font-weight:600;display:block;margin-bottom:4px;">🌱 Дата посадки (месяц-год):</label>
-                    <input id="previewPlantingDate" type="month" value="${currentMonth}" style="width:100%;padding:10px;border-radius:12px;border:1px solid #dce4dc;margin-bottom:8px;font-size:14px;">
-
-                    <button class="btn" onclick="addFromCatalogPreview('${plant.id}')" style="margin-top:4px;">➕ Добавить в коллекцию</button>
-                </div>
+    // ================================================================
+    // ВКЛАДКА "ОСНОВНОЕ"
+    // ================================================================
+    let mainContent = `
+        <div style="text-align:center;padding:20px 20px 16px 20px;border-bottom:1px solid #eef3ee;">
+            <div style="font-size:48px;">${plant.icon || '🌿'}</div>
+            <div style="font-size:20px;font-weight:700;margin:8px 0;">${plant.name}</div>
+            <div style="font-size:14px;color:#5c725c;">${plant.description || ''}</div>
+        </div>
+        <div style="padding:0 20px;">
+            <div style="background:#f4f7f4;padding:12px;border-radius:12px;margin-top:12px;">
+                📂 Форма роста: ${plant.growth_forms ? plant.growth_forms.join(', ') : '—'}<br>
+                ☀️ Свет: ${plant.light_needs || '—'}<br>
+                ${plant.dangerous_pets ? '⚠️ Опасно для животных: Да' : '✅ Безопасно для животных'}<br>
+                ${plant.dangerous_children ? '⚠️ Опасно для детей: Да' : '✅ Безопасно для детей'}<br>
+                💧 Полив: летом ${plant.default_watering_summer || 3} дн., зимой ${plant.default_watering_winter || 7} дн.<br>
+                🧪 Подкормка: ${plant.default_fertilizing || 30} дн.<br>
+                🔄 Пересадка: ${plant.default_repot_interval || 2} года<br>
+                🌱 Грунт: ${plant.default_soil || '—'}
             </div>
         </div>
+        <div style="padding:0 20px;margin-top:14px;">
+            <label style="font-weight:600;display:block;margin-bottom:4px;">Добавить в коллекцию:</label>
+            <select id="previewBaseSelect" style="width:100%;padding:10px;border-radius:12px;border:1px solid #dce4dc;margin-bottom:8px;font-size:14px;">${basesOptions}</select>
+
+            <label style="font-weight:600;display:block;margin-bottom:4px;">📍 Расположение:</label>
+            <input id="previewPlacement" placeholder="Гостиная, кухня..." style="width:100%;padding:10px;border-radius:12px;border:1px solid #dce4dc;margin-bottom:8px;font-size:14px;" list="previewLocationSuggestions">
+            <datalist id="previewLocationSuggestions"></datalist>
+
+            <label style="font-weight:600;display:block;margin-bottom:4px;">🌱 Дата посадки (месяц-год):</label>
+            <input id="previewPlantingDate" type="month" value="${currentMonth}" style="width:100%;padding:10px;border-radius:12px;border:1px solid #dce4dc;margin-bottom:8px;font-size:14px;">
+
+            <button class="btn" onclick="addFromCatalogPreview('${plant.id}')" style="margin-top:4px;">➕ Добавить в коллекцию</button>
+        </div>
     `;
-    document.body.appendChild(overlay);
+
+    // ================================================================
+    // ВКЛАДКА "СПРАВКА"
+    // ================================================================
+    let infoContent = '';
+    if (plant.facts && plant.facts.length > 0) {
+        infoContent = plant.facts.map(fact => {
+            const char = charMap[fact.characteristic_id];
+            const icon = char ? char.icon : '📌';
+            const name = char ? char.name : 'Информация';
+            return `
+                <div class="info-fact-item" onclick="showFactDetail('${plant.id}', '${fact.characteristic_id}')">
+                    <div class="fact-title">
+                        ${icon} ${name}
+                    </div>
+                    <div class="fact-text">${fact.short}</div>
+                    ${fact.source ? `<div class="fact-source">📚 ${fact.source}</div>` : ''}
+                </div>
+            `;
+        }).join('');
+    } else {
+        infoContent = `
+            <div style="text-align:center;padding:30px 0;color:#8aa08a;">
+                📖 Нет справочной информации о растении
+            </div>
+        `;
+    }
+
+    // ================================================================
+    // ВКЛАДКИ И СБОРКА
+    // ================================================================
+    const tabsHtml = `
+        <div class="detail-tabs">
+            <button class="${catalogPreviewTab === 'main' ? 'active' : ''}" onclick="switchCatalogPreviewTab('main')">📋 Основное</button>
+            <button class="${catalogPreviewTab === 'info' ? 'active' : ''}" onclick="switchCatalogPreviewTab('info')">📖 Справка</button>
+        </div>
+    `;
+
+    container.innerHTML = `
+        <div style="display:flex;justify-content:flex-end;padding:12px 16px 0 0;flex-shrink:0;">
+            <button class="edit-toggle" onclick="document.getElementById('catalogPreviewModal').classList.remove('show')">✕</button>
+        </div>
+        ${tabsHtml}
+        <div class="detail-tab-content ${catalogPreviewTab === 'main' ? 'active' : ''}" style="padding:0 0 20px 0;">
+            ${mainContent}
+        </div>
+        <div class="detail-tab-content ${catalogPreviewTab === 'info' ? 'active' : ''}" style="padding:0 0 20px 0;">
+            <div style="padding:0 20px;">${infoContent}</div>
+        </div>
+        <div style="padding:0 20px 20px 20px;">
+            <button class="btn btn-outline" onclick="document.getElementById('catalogPreviewModal').classList.remove('show')" style="margin-top:8px;">Закрыть</button>
+        </div>
+    `;
 
     setTimeout(() => {
         updateLocationSuggestionsForPreview();
     }, 100);
-
-    overlay.addEventListener('click', function(e) {
-        if (e.target === this) {
-            this.remove();
-        }
-    });
 }
 
 function updateLocationSuggestionsForPreview() {
@@ -410,7 +449,6 @@ function addFromCatalogPreview(catalogId) {
         catalog_icon: plant.icon || '🌿',
         catalog_description: plant.description || '',
         
-        // ← ИСТОРИЯ ПУСТАЯ, БУДЕТ ЗАПОЛНЯТЬСЯ ПРИ ДЕЙСТВИЯХ
         history: [],
         
         createdAt: new Date().toISOString()
@@ -419,9 +457,7 @@ function addFromCatalogPreview(catalogId) {
     state.flowers.push(flower);
     saveState();
     
-    const previewModal = document.getElementById('previewModal');
-    if (previewModal) previewModal.remove();
-    
+    document.getElementById('catalogPreviewModal').classList.remove('show');
     renderAll();
     renderCare();
     renderCalendar();
@@ -446,4 +482,35 @@ function updateLocationSuggestions() {
     datalist.innerHTML = [...locations]
         .map(l => `<option value="${l}">`)
         .join('');
+}
+
+function showFactDetail(plantId, characteristicId) {
+    const plant = getCatalogPlant(plantId);
+    if (!plant) return;
+    const fact = plant.facts?.find(f => f.characteristic_id === characteristicId);
+    if (!fact) return;
+    const char = getCharacteristic(characteristicId);
+    const icon = char ? char.icon : '📌';
+    const name = char ? char.name : 'Информация';
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay show';
+    overlay.innerHTML = `
+        <div class="modal-content">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px 0 20px;flex-shrink:0;">
+                <h2 style="margin:0;font-size:18px;">${icon} ${name}</h2>
+                <button class="edit-toggle" onclick="this.closest('.modal-overlay').classList.remove('show')">✕</button>
+            </div>
+            <div class="modal-scroll" style="padding:0 20px 20px 20px;">
+                <div style="font-size:14px;line-height:1.6;color:#1e2e1e;white-space:pre-wrap;">${fact.full}</div>
+                ${fact.source ? `<div style="margin-top:12px;font-size:12px;color:#8aa08a;">📚 Источник: ${fact.source}</div>` : ''}
+                <div style="margin-top:8px;font-size:12px;color:#5c725c;">🌿 ${plant.name}</div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="this.closest('.modal-overlay').classList.remove('show')">Закрыть</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('show'); });
 }

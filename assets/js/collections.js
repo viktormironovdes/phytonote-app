@@ -120,10 +120,6 @@ function deleteCurrentBase() {
     if (!base) return;
     if (!confirm(`Удалить коллекцию "${getBaseDisplayName(base)}" и все растения в ней?`)) return;
     state.flowers = state.flowers.filter(f => f.base_id !== base.id);
-    state.history = state.history.filter(h => {
-        const flower = state.flowers.find(f => f.id === h.flower_id);
-        return flower && flower.base_id !== base.id;
-    });
     state.bases = state.bases.filter(b => b.id !== base.id);
     saveState();
     backToBases();
@@ -139,10 +135,6 @@ function disconnectFromBase() {
     if (!confirm(`Отключиться от коллекции "${getBaseDisplayName(base)}"? Растения останутся у владельца.`)) return;
     state.bases = state.bases.filter(b => b.id !== base.id);
     state.flowers = state.flowers.filter(f => f.base_id !== base.id);
-    state.history = state.history.filter(h => {
-        const flower = state.flowers.find(f => f.id === h.flower_id);
-        return flower && flower.base_id !== base.id;
-    });
     saveState();
     backToBases();
     renderAll();
@@ -201,6 +193,3 @@ function editBaseName() {
         renderBasePlants();
     }
 }
-
-// Функции экспорта/импорта перенесены в settings.js
-// Здесь они вызываются из профиля

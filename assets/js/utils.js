@@ -48,7 +48,7 @@ function getSeason() {
 }
 
 // ================================================================
-// ФУНКЦИИ ДЛЯ РАБОТЫ С ИСТОРИЕЙ (НОВЫЕ)
+// ФУНКЦИИ ДЛЯ РАБОТЫ С ИСТОРИЕЙ
 // ================================================================
 
 function getWateringInterval(flower) {
@@ -100,19 +100,49 @@ function getDaysUntilWatering(flower) {
     return interval - diff;
 }
 
+// ================================================================
+// ИСПРАВЛЕННАЯ ФУНКЦИЯ getNextWateringDate
+// ================================================================
+
 function getNextWateringDate(flower) {
     const lastDate = getLastWateringDate(flower);
+    const now = new Date();
+    const todayStr = getLocalDateStr(now);
+    
+    // Если нет истории полива — завтра
     if (!lastDate) {
-        const d = new Date();
+        const d = new Date(now);
         d.setDate(d.getDate() + 1);
         return d;
     }
+    
     const interval = getWateringInterval(flower);
     const last = new Date(lastDate);
-    const d = new Date(last);
-    d.setDate(d.getDate() + interval);
-    return d;
+    const lastStr = getLocalDateStr(last);
+    
+    // Если последний полив был сегодня — следующий через interval дней
+    if (lastStr === todayStr) {
+        const next = new Date(now);
+        next.setDate(next.getDate() + interval);
+        return next;
+    }
+    
+    // Считаем следующую дату полива от последнего
+    const next = new Date(last);
+    next.setDate(next.getDate() + interval);
+    
+    // Если следующая дата уже прошла (просрочка) — возвращаем сегодня
+    if (next < now) {
+        return new Date(now);
+    }
+    
+    // Если следующая дата в будущем — возвращаем её
+    return next;
 }
+
+// ================================================================
+// ОСТАЛЬНЫЕ ФУНКЦИИ (без изменений)
+// ================================================================
 
 function isFertilizingActive(flower) {
     const now = new Date();
@@ -149,22 +179,33 @@ function getDaysUntilFertilizing(flower) {
 function getNextFertilizingDate(flower) {
     if (!flower.fertilizing || flower.fertilizing <= 0) return null;
     const lastDate = getLastFertilizingDate(flower);
+    const now = new Date();
     if (!lastDate) {
-        const d = new Date();
+        const d = new Date(now);
         d.setDate(d.getDate() + flower.fertilizing);
         return d;
     }
     const last = new Date(lastDate);
-    const d = new Date(last);
-    d.setDate(d.getDate() + flower.fertilizing);
-    return d;
+    const next = new Date(last);
+    next.setDate(next.getDate() + flower.fertilizing);
+    
+    if (next < now && flower.fertilizing > 0) {
+        return new Date(now);
+    }
+    return next;
 }
 
 function getNextRepottingDate(flower) {
+    if (!flower.repot_interval || flower.repot_interval <= 0) return null;
     const lastDate = getLastRepottingDate(flower);
     if (!lastDate) return null;
     const last = new Date(lastDate);
-    const d = new Date(last);
-    d.setFullYear(d.getFullYear() + flower.repot_interval);
-    return d;
+    const now = new Date();
+    const next = new Date(last);
+    next.setFullYear(next.getFullYear() + flower.repot_interval);
+    
+    if (next < now) {
+        return new Date(now);
+    }
+    return next;
 }

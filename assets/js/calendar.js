@@ -40,31 +40,39 @@ function renderCalendar() {
                 hasDone = true;
             }
 
-            // Проверяем запланированные события
-            if (dateStr >= todayStr) {
-                // Полив
-                const nextWateringDate = getNextWateringDate(f);
-                const nextWateringStr = getLocalDateStr(nextWateringDate);
-                let effectiveDateStr = nextWateringStr;
-                if (dateStr === todayStr && nextWateringDate < now) {
-                    effectiveDateStr = todayStr;
-                }
-                if (effectiveDateStr === dateStr) {
-                    hasPlanned = true;
-                }
+            // Проверяем запланированные события (ИСПРАВЛЕННАЯ ЛОГИКА)
+            // Для всех дней, включая сегодня
+            const nextWateringDate = getNextWateringDate(f);
+            const nextWateringStr = getLocalDateStr(nextWateringDate);
+            
+            // Если сегодня и полив уже должен был быть (просрочка) — показываем как запланировано
+            if (dateStr === todayStr && nextWateringDate <= now) {
+                hasPlanned = true;
+            } else if (nextWateringStr === dateStr) {
+                hasPlanned = true;
+            }
 
-                // Подкормка
-                if (f.fertilizing > 0 && isFertilizingActive(f)) {
-                    const nextFertDate = getNextFertilizingDate(f);
-                    if (nextFertDate && getLocalDateStr(nextFertDate) === dateStr) {
+            // Подкормка
+            if (f.fertilizing > 0 && isFertilizingActive(f)) {
+                const nextFertDate = getNextFertilizingDate(f);
+                if (nextFertDate) {
+                    const nextFertStr = getLocalDateStr(nextFertDate);
+                    if (dateStr === todayStr && nextFertDate <= now) {
+                        hasPlanned = true;
+                    } else if (nextFertStr === dateStr) {
                         hasPlanned = true;
                     }
                 }
+            }
 
-                // Пересадка
-                if (f.repot_interval > 0) {
-                    const nextRepotDate = getNextRepottingDate(f);
-                    if (nextRepotDate && getLocalDateStr(nextRepotDate) === dateStr) {
+            // Пересадка
+            if (f.repot_interval > 0) {
+                const nextRepotDate = getNextRepottingDate(f);
+                if (nextRepotDate) {
+                    const nextRepotStr = getLocalDateStr(nextRepotDate);
+                    if (dateStr === todayStr && nextRepotDate <= now) {
+                        hasPlanned = true;
+                    } else if (nextRepotStr === dateStr) {
                         hasPlanned = true;
                     }
                 }
@@ -110,44 +118,65 @@ function showDayEvents(dateStr) {
     state.flowers.forEach(f => {
         if (!isBaseEditable(f.base_id)) return;
 
-        // Проверяем события из истории
+        // События из истории
         const historyEvents = (f.history || []).filter(h => h.date === dateStr);
         historyEvents.forEach(h => {
             events.push({ flower: f, type: h.type, date: h.date, planned: false, notes: h.notes });
         });
 
-        // Проверяем запланированные события
+        // Запланированные события (ИСПРАВЛЕННАЯ ЛОГИКА)
         const now = new Date();
         const todayStr = getLocalDateStr(now);
-        if (dateStr >= todayStr) {
-            const nextWateringDate = getNextWateringDate(f);
-            if (getLocalDateStr(nextWateringDate) === dateStr) {
-                const hasDone = (f.history || []).some(h => 
-                    h.date === dateStr && h.type === 'watering'
-                );
-                if (!hasDone) {
-                    events.push({ flower: f, type: 'watering', date: dateStr, planned: true });
-                }
-            }
 
-            if (f.fertilizing > 0 && isFertilizingActive(f)) {
-                const nextFertDate = getNextFertilizingDate(f);
-                if (nextFertDate && getLocalDateStr(nextFertDate) === dateStr) {
-                    const hasDone = (f.history || []).some(h => 
-                        h.date === dateStr && h.type === 'fertilizing'
-                    );
+        // Полив
+        const nextWateringDate = getNextWateringDate(f);
+        const nextWateringStr = getLocalDateStr(nextWateringDate);
+        let isWateringPlanned = false;
+        if (dateStr === todayStr && nextWateringDate <= now) {
+            isWateringPlanned = true;
+        } else if (nextWateringStr === dateStr) {
+            isWateringPlanned = true;
+        }
+        if (isWateringPlanned) {
+            const hasDone = (f.history || []).some(h => h.date === dateStr && h.type === 'watering');
+            if (!hasDone) {
+                events.push({ flower: f, type: 'watering', date: dateStr, planned: true });
+            }
+        }
+
+        // Подкормка
+        if (f.fertilizing > 0 && isFertilizingActive(f)) {
+            const nextFertDate = getNextFertilizingDate(f);
+            if (nextFertDate) {
+                const nextFertStr = getLocalDateStr(nextFertDate);
+                let isFertPlanned = false;
+                if (dateStr === todayStr && nextFertDate <= now) {
+                    isFertPlanned = true;
+                } else if (nextFertStr === dateStr) {
+                    isFertPlanned = true;
+                }
+                if (isFertPlanned) {
+                    const hasDone = (f.history || []).some(h => h.date === dateStr && h.type === 'fertilizing');
                     if (!hasDone) {
                         events.push({ flower: f, type: 'fertilizing', date: dateStr, planned: true });
                     }
                 }
             }
+        }
 
-            if (f.repot_interval > 0) {
-                const nextRepotDate = getNextRepottingDate(f);
-                if (nextRepotDate && getLocalDateStr(nextRepotDate) === dateStr) {
-                    const hasDone = (f.history || []).some(h => 
-                        h.date === dateStr && h.type === 'repotting'
-                    );
+        // Пересадка
+        if (f.repot_interval > 0) {
+            const nextRepotDate = getNextRepottingDate(f);
+            if (nextRepotDate) {
+                const nextRepotStr = getLocalDateStr(nextRepotDate);
+                let isRepotPlanned = false;
+                if (dateStr === todayStr && nextRepotDate <= now) {
+                    isRepotPlanned = true;
+                } else if (nextRepotStr === dateStr) {
+                    isRepotPlanned = true;
+                }
+                if (isRepotPlanned) {
+                    const hasDone = (f.history || []).some(h => h.date === dateStr && h.type === 'repotting');
                     if (!hasDone) {
                         events.push({ flower: f, type: 'repotting', date: dateStr, planned: true });
                     }

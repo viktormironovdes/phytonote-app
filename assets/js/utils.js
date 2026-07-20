@@ -47,15 +47,44 @@ function getSeason() {
     return 'winter';
 }
 
+// ================================================================
+// ФУНКЦИИ ДЛЯ РАБОТЫ С ИСТОРИЕЙ (НОВЫЕ)
+// ================================================================
+
 function getWateringInterval(flower) {
     const season = getSeason();
     if (season === 'summer' || season === 'spring') return flower.watering_summer || 3;
     return flower.watering_winter || 7;
 }
 
+function getLastEvent(flower, type) {
+    if (!flower.history || flower.history.length === 0) return null;
+    const events = flower.history
+        .filter(h => h.type === type)
+        .sort((a, b) => b.date.localeCompare(a.date));
+    return events[0] || null;
+}
+
+function getLastWateringDate(flower) {
+    const event = getLastEvent(flower, 'watering');
+    return event ? event.date : null;
+}
+
+function getLastFertilizingDate(flower) {
+    const event = getLastEvent(flower, 'fertilizing');
+    return event ? event.date : null;
+}
+
+function getLastRepottingDate(flower) {
+    const event = getLastEvent(flower, 'repotting');
+    return event ? event.date : null;
+}
+
 function getWateringStatus(flower) {
+    const lastDate = getLastWateringDate(flower);
+    if (!lastDate) return 'yellow';
     const interval = getWateringInterval(flower);
-    const last = new Date(flower.last_watering || Date.now());
+    const last = new Date(lastDate);
     const diff = Math.floor((new Date() - last) / 86400000);
     if (diff >= interval) return 'red';
     if (diff >= interval - 1) return 'yellow';
@@ -63,15 +92,23 @@ function getWateringStatus(flower) {
 }
 
 function getDaysUntilWatering(flower) {
+    const lastDate = getLastWateringDate(flower);
+    if (!lastDate) return 0;
     const interval = getWateringInterval(flower);
-    const last = new Date(flower.last_watering || Date.now());
+    const last = new Date(lastDate);
     const diff = Math.floor((new Date() - last) / 86400000);
     return interval - diff;
 }
 
 function getNextWateringDate(flower) {
+    const lastDate = getLastWateringDate(flower);
+    if (!lastDate) {
+        const d = new Date();
+        d.setDate(d.getDate() + 1);
+        return d;
+    }
     const interval = getWateringInterval(flower);
-    const last = new Date(flower.last_watering || Date.now());
+    const last = new Date(lastDate);
     const d = new Date(last);
     d.setDate(d.getDate() + interval);
     return d;
@@ -92,8 +129,9 @@ function isFertilizingActive(flower) {
 function getFertilizingStatus(flower) {
     if (!flower.fertilizing || flower.fertilizing <= 0) return 'Не требуется';
     if (!isFertilizingActive(flower)) return '⏸️ Период покоя';
-    const last = new Date(flower.last_fertilizing || Date.now());
-    const diff = Math.floor((new Date() - last) / 86400000);
+    const lastDate = getLastFertilizingDate(flower);
+    if (!lastDate) return '🟡 Нет данных';
+    const diff = Math.floor((new Date() - new Date(lastDate)) / 86400000);
     if (diff >= flower.fertilizing) return '🔴 Пора';
     if (diff >= flower.fertilizing - 2) return '🟡 Скоро';
     return '🟢 В норме';
@@ -102,7 +140,31 @@ function getFertilizingStatus(flower) {
 function getDaysUntilFertilizing(flower) {
     if (!flower.fertilizing || flower.fertilizing <= 0) return Infinity;
     if (!isFertilizingActive(flower)) return Infinity;
-    const last = new Date(flower.last_fertilizing || Date.now());
-    const diff = Math.floor((new Date() - last) / 86400000);
+    const lastDate = getLastFertilizingDate(flower);
+    if (!lastDate) return 0;
+    const diff = Math.floor((new Date() - new Date(lastDate)) / 86400000);
     return flower.fertilizing - diff;
+}
+
+function getNextFertilizingDate(flower) {
+    if (!flower.fertilizing || flower.fertilizing <= 0) return null;
+    const lastDate = getLastFertilizingDate(flower);
+    if (!lastDate) {
+        const d = new Date();
+        d.setDate(d.getDate() + flower.fertilizing);
+        return d;
+    }
+    const last = new Date(lastDate);
+    const d = new Date(last);
+    d.setDate(d.getDate() + flower.fertilizing);
+    return d;
+}
+
+function getNextRepottingDate(flower) {
+    const lastDate = getLastRepottingDate(flower);
+    if (!lastDate) return null;
+    const last = new Date(lastDate);
+    const d = new Date(last);
+    d.setFullYear(d.getFullYear() + flower.repot_interval);
+    return d;
 }

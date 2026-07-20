@@ -37,7 +37,6 @@ function showAddPlantModal(editId) {
             document.getElementById('fFertStart').value = f.fertilizing_start || 3;
             document.getElementById('fFertEnd').value = f.fertilizing_end || 10;
             document.getElementById('fRepot').value = f.repot_interval || 2;
-            document.getElementById('fLastRepotting').value = f.last_repotting || today;
             document.getElementById('fNotes').value = f.notes || '';
             return;
         }
@@ -55,7 +54,6 @@ function showAddPlantModal(editId) {
     document.getElementById('fFertStart').value = 3;
     document.getElementById('fFertEnd').value = 10;
     document.getElementById('fRepot').value = 2;
-    document.getElementById('fLastRepotting').value = today;
     document.getElementById('fNotes').value = '';
 }
 
@@ -126,7 +124,6 @@ function saveFlower() {
         fertilizing_start: parseInt(document.getElementById('fFertStart').value) || 3,
         fertilizing_end: parseInt(document.getElementById('fFertEnd').value) || 10,
         repot_interval: parseInt(document.getElementById('fRepot').value) || 2,
-        last_repotting: document.getElementById('fLastRepotting').value || today,
         notes: document.getElementById('fNotes').value.trim(),
     };
 
@@ -149,39 +146,13 @@ function saveFlower() {
             source_type: 'manual',
             photo: null,
             ...data,
-            last_watering: today,
-            last_fertilizing: today,
             catalog_name: data.name,
             catalog_icon: '🌿',
             catalog_description: '',
+            history: [],
             createdAt: new Date().toISOString()
         };
         state.flowers.push(flower);
-
-        state.history.push({
-            id: 'hist_' + generateUUID(),
-            flower_id: flower.id,
-            date: today,
-            type: 'watering',
-            notes: 'Создано вручную'
-        });
-        if (flower.fertilizing > 0) {
-            state.history.push({
-                id: 'hist_' + generateUUID(),
-                flower_id: flower.id,
-                date: today,
-                type: 'fertilizing',
-                notes: 'Создано вручную'
-            });
-        }
-        state.history.push({
-            id: 'hist_' + generateUUID(),
-            flower_id: flower.id,
-            date: flower.last_repotting,
-            type: 'repotting',
-            notes: 'Создано вручную'
-        });
-
         saveState();
         closePlantModal();
         renderAll();
@@ -211,7 +182,7 @@ function updateLocationSuggestions() {
 }
 
 // ================================================================
-// ДЕТАЛЬНЫЙ ПРОСМОТР (ПОЛНОСТЬЮ ПЕРЕРАБОТАННЫЙ)
+// ДЕТАЛЬНЫЙ ПРОСМОТР
 // ================================================================
 
 function showDetail(flowerId) {
@@ -254,7 +225,7 @@ function renderDetail() {
     const settings = state.user.display_settings || {};
     const editMode = state.isDetailEdit && isEditable;
     const expanded = state.isExpanded;
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateStr(new Date());
 
     const status = getWateringStatus(f);
     const days = getDaysUntilWatering(f);
@@ -268,17 +239,21 @@ function renderDetail() {
         `с ${['Января','Февраля','Марта','Апреля','Мая','Июня','Июля','Августа','Сентября','Октября','Ноября','Декабря'][f.fertilizing_start-1]} по ${['Января','Февраля','Марта','Апреля','Мая','Июня','Июля','Августа','Сентября','Октября','Ноября','Декабря'][f.fertilizing_end-1]}` :
         'Не указан';
 
-    const historyHtml = history.slice(-5).reverse().map(h => `
-        <div class="history-item">
-            <span>${h.date}</span>
-            <span>${h.type === 'watering' ? '💧 Полив' : h.type === 'fertilizing' ? '🧪 Подкормка' : '🔄 Пересадка'}</span>
-            <span>${h.notes || ''}</span>
-        </div>
-    `).join('') || 'Нет истории';
+    // История (последние 5 записей)
+    const historyHtml = history.slice(0, 5).map(h => {
+        const typeMap = { watering: '💧 Полив', fertilizing: '🧪 Подкормка', repotting: '🔄 Пересадка' };
+        return `
+            <div class="history-item">
+                <span>${h.date}</span>
+                <span>${typeMap[h.type] || h.type}</span>
+                <span>${h.notes || ''}</span>
+                ${isEditable ? `<button class="btn btn-sm btn-outline" onclick="editHistoryEvent('${f.id}', '${h.id}')" style="padding:2px 8px;font-size:11px;">✏️</button>` : ''}
+                ${isEditable ? `<button class="btn btn-sm btn-outline" onclick="deleteHistoryEvent('${f.id}', '${h.id}')" style="padding:2px 8px;font-size:11px;color:#d9534f;border-color:#f0d0d0;">🗑</button>` : ''}
+            </div>
+        `;
+    }).join('') || 'Нет истории';
 
-    // ============================================================
-    // ФОТО (статичная часть)
-    // ============================================================
+    // ФОТО
     const photoHtml = `
         <div class="detail-header">
             <div class="photo-container" onclick="${isEditable ? `document.getElementById('flowerPhotoInput').click()` : ''}">
@@ -295,9 +270,7 @@ function renderDetail() {
         </div>
     `;
 
-    // ============================================================
     // ВКЛАДКИ
-    // ============================================================
     const tabsHtml = `
         <div class="detail-tabs">
             <button class="${state.detailTab === 'main' ? 'active' : ''}" onclick="switchDetailTab('main')">📋 Основное</button>
@@ -305,9 +278,7 @@ function renderDetail() {
         </div>
     `;
 
-    // ============================================================
     // ВКЛАДКА "ОСНОВНОЕ"
-    // ============================================================
     let mainContent = `
         <div class="detail-field">
             <span class="label">🌿 Название</span>
@@ -326,7 +297,6 @@ function renderDetail() {
         `;
     }
 
-    // ГРУНТ (отдельный параметр)
     const soilFact = catalogPlant?.facts?.find(f => f.characteristic_id === 'soil');
     const soilText = soilFact?.short || f.soil || '—';
     if (expanded) {
@@ -425,11 +395,12 @@ function renderDetail() {
         `;
     }
 
-    if ((settings.show_last_repotting || expanded) && f.last_repotting) {
+    if ((settings.show_last_repotting || expanded)) {
+        const lastRepotDate = getLastRepottingDate(f);
         mainContent += `
             <div class="detail-field">
                 <span class="label">🔄 Последняя пересадка</span>
-                ${editMode ? `<input id="editLastRepotting" type="date" value="${f.last_repotting || ''}" max="${today}">` : `<span class="value">${f.last_repotting || '—'}</span>`}
+                <span class="value">${lastRepotDate || '—'}</span>
             </div>
         `;
     }
@@ -482,18 +453,6 @@ function renderDetail() {
                     <span class="label">🔄 Пересадка</span>
                     ${editMode ? `<input id="editRepot" type="number" min="1" value="${f.repot_interval}">` : `<span class="value">${f.repot_interval} лет</span>`}
                 </div>
-                <div class="detail-field">
-                    <span class="label">📅 Последний полив</span>
-                    ${editMode ? `<input id="editLastWatering" type="date" value="${f.last_watering || ''}" max="${today}">` : `<span class="value">${f.last_watering || '—'}</span>`}
-                </div>
-                <div class="detail-field">
-                    <span class="label">🧪 Последняя подкормка</span>
-                    ${editMode ? `<input id="editLastFertilizing" type="date" value="${f.last_fertilizing || ''}" max="${today}">` : `<span class="value">${f.last_fertilizing || '—'}</span>`}
-                </div>
-                <div class="detail-field">
-                    <span class="label">🔄 Последняя пересадка</span>
-                    ${editMode ? `<input id="editLastRepottingCare" type="date" value="${f.last_repotting || ''}" max="${today}">` : `<span class="value">${f.last_repotting || '—'}</span>`}
-                </div>
                 ${editMode ? `
                     <div class="detail-field">
                         <span class="label">📝 Примечания</span>
@@ -504,7 +463,7 @@ function renderDetail() {
         `;
     }
 
-    // КНОПКА РАЗВЕРНУТЬ/СВЕРНУТЬ (над историей)
+    // КНОПКА РАЗВЕРНУТЬ/СВЕРНУТЬ
     const expandBtnHtml = `
         <button class="btn-expand" onclick="toggleExpand()" style="margin-top:12px;">
             ${expanded ? 'Свернуть все характеристики' : 'Развернуть все характеристики'}
@@ -515,14 +474,15 @@ function renderDetail() {
     // ИСТОРИЯ (после кнопки разворачивания)
     const historyBlock = `
         <div style="margin-top:12px;padding:0 20px;">
-            <div style="font-weight:600;font-size:14px;">📜 История (последние 5)</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <div style="font-weight:600;font-size:14px;">📜 История ухода</div>
+                ${isEditable ? `<button class="btn btn-sm btn-success" onclick="showAddHistoryEventModal('${f.id}')" style="padding:4px 12px;font-size:12px;width:auto;">➕ Добавить</button>` : ''}
+            </div>
             ${historyHtml}
         </div>
     `;
 
-    // ============================================================
     // ВКЛАДКА "СПРАВКА"
-    // ============================================================
     let infoContent = '';
     if (isCatalogLoaded() && f.catalog_id) {
         const plant = getCatalogPlant(f.catalog_id);
@@ -531,7 +491,6 @@ function renderDetail() {
         state.catalog.characteristics.forEach(c => charMap[c.id] = c);
 
         if (facts.length > 0) {
-            // УБРАН ТЕКСТ "Подробнее →"
             infoContent = facts.map(fact => {
                 const char = charMap[fact.characteristic_id];
                 const icon = char ? char.icon : '📌';
@@ -569,9 +528,7 @@ function renderDetail() {
         `;
     }
 
-    // ============================================================
-    // СТАТИЧНЫЕ КНОПКИ (всегда внизу)
-    // ============================================================
+    // СТАТИЧНЫЕ КНОПКИ
     const actionsHtml = `
         <div class="detail-actions-main">
             ${isEditable ? `
@@ -591,9 +548,7 @@ function renderDetail() {
         ` : ''}
     `;
 
-    // ============================================================
     // СБОРКА
-    // ============================================================
     const detailHtml = `
         ${photoHtml}
         <div style="padding:0 0 8px 0;">
@@ -632,7 +587,147 @@ function renderDetail() {
 }
 
 // ================================================================
-// СОХРАНЕНИЕ ИЗМЕНЕНИЙ
+// РАБОТА С ИСТОРИЕЙ В КАРТОЧКЕ
+// ================================================================
+
+function showAddHistoryEventModal(flowerId) {
+    const f = getFlower(flowerId);
+    if (!f) return;
+    
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay show';
+    overlay.innerHTML = `
+        <div class="modal-content">
+            <h2>➕ Добавить событие</h2>
+            <div class="modal-scroll">
+                <label>Тип события</label>
+                <select id="newHistoryType" style="width:calc(100% - 40px);margin:0 20px;padding:10px;border-radius:12px;border:1px solid #dce4dc;font-size:14px;">
+                    <option value="watering">💧 Полив</option>
+                    <option value="fertilizing">🧪 Подкормка</option>
+                    <option value="repotting">🔄 Пересадка</option>
+                </select>
+                <label style="margin-top:10px;">Дата</label>
+                <input id="newHistoryDate" type="date" value="${getLocalDateStr(new Date())}" style="width:calc(100% - 40px);margin:0 20px;padding:10px;border-radius:12px;border:1px solid #dce4dc;font-size:14px;">
+                <label style="margin-top:10px;">Примечание</label>
+                <input id="newHistoryNotes" placeholder="Дополнительная информация..." style="width:calc(100% - 40px);margin:0 20px;padding:10px;border-radius:12px;border:1px solid #dce4dc;font-size:14px;">
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="this.closest('.modal-overlay').classList.remove('show')">Отмена</button>
+                <button class="btn-save" onclick="addHistoryEventFromModal('${flowerId}')">Добавить</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('show'); });
+}
+
+function addHistoryEventFromModal(flowerId) {
+    const f = getFlower(flowerId);
+    if (!f) return;
+    
+    const type = document.getElementById('newHistoryType').value;
+    const date = document.getElementById('newHistoryDate').value;
+    const notes = document.getElementById('newHistoryNotes').value.trim();
+    
+    if (!date) {
+        alert('Выберите дату');
+        return;
+    }
+    
+    addHistoryEvent(f, type, date, notes);
+    saveState();
+    document.querySelector('#detailModal .modal-overlay.show')?.classList.remove('show');
+    // Закрываем модалку добавления
+    document.querySelectorAll('.modal-overlay.show').forEach(el => {
+        if (el.id !== 'detailModal') el.classList.remove('show');
+    });
+    renderDetail();
+    renderAll();
+    renderCare();
+    renderCalendar();
+    alert('✅ Событие добавлено в историю!');
+}
+
+function editHistoryEvent(flowerId, eventId) {
+    const f = getFlower(flowerId);
+    if (!f) return;
+    const event = f.history.find(h => h.id === eventId);
+    if (!event) return;
+    
+    const typeMap = { watering: '💧 Полив', fertilizing: '🧪 Подкормка', repotting: '🔄 Пересадка' };
+    
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay show';
+    overlay.innerHTML = `
+        <div class="modal-content">
+            <h2>✏️ Редактировать событие</h2>
+            <div class="modal-scroll">
+                <label>Тип события</label>
+                <select id="editHistoryType" style="width:calc(100% - 40px);margin:0 20px;padding:10px;border-radius:12px;border:1px solid #dce4dc;font-size:14px;">
+                    <option value="watering" ${event.type === 'watering' ? 'selected' : ''}>💧 Полив</option>
+                    <option value="fertilizing" ${event.type === 'fertilizing' ? 'selected' : ''}>🧪 Подкормка</option>
+                    <option value="repotting" ${event.type === 'repotting' ? 'selected' : ''}>🔄 Пересадка</option>
+                </select>
+                <label style="margin-top:10px;">Дата</label>
+                <input id="editHistoryDate" type="date" value="${event.date}" style="width:calc(100% - 40px);margin:0 20px;padding:10px;border-radius:12px;border:1px solid #dce4dc;font-size:14px;">
+                <label style="margin-top:10px;">Примечание</label>
+                <input id="editHistoryNotes" placeholder="Дополнительная информация..." value="${event.notes || ''}" style="width:calc(100% - 40px);margin:0 20px;padding:10px;border-radius:12px;border:1px solid #dce4dc;font-size:14px;">
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="this.closest('.modal-overlay').classList.remove('show')">Отмена</button>
+                <button class="btn-save" onclick="saveHistoryEventEdit('${flowerId}', '${eventId}')">Сохранить</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('show'); });
+}
+
+function saveHistoryEventEdit(flowerId, eventId) {
+    const f = getFlower(flowerId);
+    if (!f) return;
+    
+    const type = document.getElementById('editHistoryType').value;
+    const date = document.getElementById('editHistoryDate').value;
+    const notes = document.getElementById('editHistoryNotes').value.trim();
+    
+    if (!date) {
+        alert('Выберите дату');
+        return;
+    }
+    
+    const event = f.history.find(h => h.id === eventId);
+    if (event) {
+        event.type = type;
+        event.date = date;
+        event.notes = notes;
+        saveState();
+    }
+    
+    document.querySelectorAll('.modal-overlay.show').forEach(el => {
+        if (el.id !== 'detailModal') el.classList.remove('show');
+    });
+    renderDetail();
+    renderAll();
+    renderCare();
+    renderCalendar();
+    alert('✅ Событие обновлено!');
+}
+
+function deleteHistoryEvent(flowerId, eventId) {
+    if (!confirm('Удалить эту запись из истории?')) return;
+    const f = getFlower(flowerId);
+    if (!f) return;
+    deleteHistoryEvent(f, eventId);
+    saveState();
+    renderDetail();
+    renderAll();
+    renderCare();
+    renderCalendar();
+}
+
+// ================================================================
+// СОХРАНЕНИЕ ИЗМЕНЕНИЙ В КАРТОЧКЕ
 // ================================================================
 
 function saveDetailEdit() {
@@ -677,15 +772,6 @@ function saveDetailEdit() {
     const repotInput = document.getElementById('editRepot');
     if (repotInput) f.repot_interval = parseInt(repotInput.value) || 2;
 
-    const lastWateringInput = document.getElementById('editLastWatering');
-    if (lastWateringInput) f.last_watering = lastWateringInput.value;
-
-    const lastFertilizingInput = document.getElementById('editLastFertilizing');
-    if (lastFertilizingInput) f.last_fertilizing = lastFertilizingInput.value;
-
-    const lastRepottingInput = document.getElementById('editLastRepotting') || document.getElementById('editLastRepottingCare');
-    if (lastRepottingInput) f.last_repotting = lastRepottingInput.value;
-
     const notesInput = document.getElementById('editNotes') || document.getElementById('editNotesExpanded');
     if (notesInput) f.notes = notesInput.value.trim();
 
@@ -716,7 +802,7 @@ function showReadOnlyDetail(flowerId) {
 }
 
 // ================================================================
-// ДЕЙСТВИЯ
+// ДЕЙСТВИЯ (ПОЛИВ, ПОДКОРМКА, ПЕРЕСАДКА)
 // ================================================================
 
 function detailWaterNow() {
@@ -724,8 +810,15 @@ function detailWaterNow() {
     if (!f) return;
     if (!isBaseEditable(f.base_id)) { alert('Это чужая коллекция'); return; }
     const today = getLocalDateStr(new Date());
-    f.last_watering = today;
-    state.history.push({ id: 'hist_' + generateUUID(), flower_id: f.id, date: today, type: 'watering', notes: 'Полив' });
+    
+    // Проверяем, не было ли уже полива сегодня
+    const existing = (f.history || []).some(h => h.date === today && h.type === 'watering');
+    if (existing) {
+        alert('Полив уже отмечен сегодня');
+        return;
+    }
+    
+    addHistoryEvent(f, 'watering', today, 'Полив');
     saveState();
     renderDetail();
     renderAll();
@@ -739,8 +832,14 @@ function detailFertilizeNow() {
     if (!f) return;
     if (!isBaseEditable(f.base_id)) { alert('Это чужая коллекция'); return; }
     const today = getLocalDateStr(new Date());
-    f.last_fertilizing = today;
-    state.history.push({ id: 'hist_' + generateUUID(), flower_id: f.id, date: today, type: 'fertilizing', notes: 'Подкормка' });
+    
+    const existing = (f.history || []).some(h => h.date === today && h.type === 'fertilizing');
+    if (existing) {
+        alert('Подкормка уже отмечена сегодня');
+        return;
+    }
+    
+    addHistoryEvent(f, 'fertilizing', today, 'Подкормка');
     saveState();
     renderDetail();
     renderAll();
@@ -754,8 +853,14 @@ function detailRepotNow() {
     if (!f) return;
     if (!isBaseEditable(f.base_id)) { alert('Это чужая коллекция'); return; }
     const today = getLocalDateStr(new Date());
-    f.last_repotting = today;
-    state.history.push({ id: 'hist_' + generateUUID(), flower_id: f.id, date: today, type: 'repotting', notes: 'Пересадка' });
+    
+    const existing = (f.history || []).some(h => h.date === today && h.type === 'repotting');
+    if (existing) {
+        alert('Пересадка уже отмечена сегодня');
+        return;
+    }
+    
+    addHistoryEvent(f, 'repotting', today, 'Пересадка');
     saveState();
     renderDetail();
     renderAll();
@@ -770,7 +875,6 @@ function deleteFlower() {
     if (!f) return;
     if (!isBaseEditable(f.base_id)) { alert('Это чужая коллекция'); return; }
     state.flowers = state.flowers.filter(fl => fl.id !== f.id);
-    state.history = state.history.filter(h => h.flower_id !== f.id);
     saveState();
     closeDetailModal();
     renderAll();
@@ -797,33 +901,26 @@ function showMoveModal() {
         return;
     }
 
-    const select = document.getElementById('moveBaseSelect');
-    if (!select) {
-        // Создаем модальное окно для перемещения
-        const overlay = document.createElement('div');
-        overlay.className = 'modal-overlay show';
-        overlay.id = 'moveModal';
-        overlay.innerHTML = `
-            <div class="modal-content">
-                <h2>📦 Переместить в коллекцию</h2>
-                <div class="modal-scroll">
-                    <label>Выберите целевую коллекцию</label>
-                    <select id="moveBaseSelect" style="width:calc(100% - 40px);margin:0 20px;padding:10px;border-radius:12px;border:1px solid #dce4dc;font-size:14px;">
-                        ${myBases.map(b => `<option value="${b.id}">${b.icon} ${getBaseDisplayName(b)}</option>`).join('')}
-                    </select>
-                </div>
-                <div class="modal-actions">
-                    <button class="btn-cancel" onclick="this.closest('.modal-overlay').classList.remove('show')">Отмена</button>
-                    <button class="btn-save" onclick="executeMove()">Переместить</button>
-                </div>
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay show';
+    overlay.id = 'moveModal';
+    overlay.innerHTML = `
+        <div class="modal-content">
+            <h2>📦 Переместить в коллекцию</h2>
+            <div class="modal-scroll">
+                <label>Выберите целевую коллекцию</label>
+                <select id="moveBaseSelect" style="width:calc(100% - 40px);margin:0 20px;padding:10px;border-radius:12px;border:1px solid #dce4dc;font-size:14px;">
+                    ${myBases.map(b => `<option value="${b.id}">${b.icon} ${getBaseDisplayName(b)}</option>`).join('')}
+                </select>
             </div>
-        `;
-        document.body.appendChild(overlay);
-        overlay.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('show'); });
-        return;
-    }
-    select.innerHTML = myBases.map(b => `<option value="${b.id}">${b.icon} ${getBaseDisplayName(b)}</option>`).join('');
-    document.getElementById('moveModal').classList.add('show');
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="this.closest('.modal-overlay').classList.remove('show')">Отмена</button>
+                <button class="btn-save" onclick="executeMove()">Переместить</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('show'); });
 }
 
 function closeMoveModal() {
@@ -839,7 +936,6 @@ function executeMove() {
     if (!f) return;
 
     f.base_id = targetBaseId;
-
     saveState();
     closeMoveModal();
     closeDetailModal();
@@ -870,7 +966,7 @@ function executeClone() {
     const original = getFlower(state.detailFlowerId);
     if (!original) return;
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateStr(new Date());
 
     const clone = {
         id: 'flower_' + generateUUID(),
@@ -890,42 +986,15 @@ function executeClone() {
         fertilizing_start: original.fertilizing_start || 3,
         fertilizing_end: original.fertilizing_end || 10,
         repot_interval: original.repot_interval || 2,
-        last_watering: today,
-        last_fertilizing: today,
-        last_repotting: today,
         notes: original.notes || '(клон)',
         catalog_name: original.catalog_name || original.name || 'Растение',
         catalog_icon: original.catalog_icon || '🌿',
         catalog_description: original.catalog_description || '',
+        history: [],
         createdAt: new Date().toISOString()
     };
 
     state.flowers.push(clone);
-
-    state.history.push({
-        id: 'hist_' + generateUUID(),
-        flower_id: clone.id,
-        date: today,
-        type: 'watering',
-        notes: 'Клон'
-    });
-    if (clone.fertilizing > 0) {
-        state.history.push({
-            id: 'hist_' + generateUUID(),
-            flower_id: clone.id,
-            date: today,
-            type: 'fertilizing',
-            notes: 'Клон'
-        });
-    }
-    state.history.push({
-        id: 'hist_' + generateUUID(),
-        flower_id: clone.id,
-        date: today,
-        type: 'repotting',
-        notes: 'Клон'
-    });
-
     saveState();
     closeCloneModal();
     renderAll();

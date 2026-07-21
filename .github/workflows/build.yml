@@ -12,14 +12,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: List files (debug)
-      run: |
-        echo "📂 Current directory contents:"
-        ls -la
-        echo ""
-        echo "📂 Looking for phytonote folder:"
-        ls -la phytonote/ 2>/dev/null || echo "phytonote folder not found"
-
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
@@ -31,75 +23,28 @@ jobs:
         distribution: 'zulu'
         java-version: '17'
 
-    - name: Create Capacitor project
+    - name: Setup Capacitor
       run: |
-        echo '{
-          "name": "PhytoNote",
-          "version": "1.0.0",
-          "scripts": {
-            "build": "echo \"Building PhytoNote...\""
-          },
-          "devDependencies": {
-            "@capacitor/cli": "^6.0.0",
-            "@capacitor/android": "^6.0.0"
-          }
-        }' > package.json
+        npm init -y
+        npm install @capacitor/cli @capacitor/android
 
-    - name: Install dependencies
-      run: npm install
-
-    - name: Copy web assets (from phytonote folder)
+    - name: Copy web files to www
       run: |
         mkdir -p www
-        
-        # Копируем из папки phytonote
-        if [ -d "phytonote" ]; then
-          echo "📂 Copying from phytonote/ folder..."
-          cp phytonote/index.html www/
-          cp phytonote/manifest.json www/
-          cp phytonote/sw.js www/
-          cp -r phytonote/css www/
-          cp -r phytonote/js www/
-          cp -r phytonote/icons www/ 2>/dev/null || true
-        else
-          echo "📂 Copying from root folder..."
-          cp index.html www/ 2>/dev/null || echo "⚠️ index.html not found in root"
-          cp manifest.json www/ 2>/dev/null || echo "⚠️ manifest.json not found in root"
-          cp sw.js www/ 2>/dev/null || echo "⚠️ sw.js not found in root"
-          cp -r css www/ 2>/dev/null || echo "⚠️ css folder not found"
-          cp -r js www/ 2>/dev/null || echo "⚠️ js folder not found"
-          cp -r icons www/ 2>/dev/null || echo "⚠️ icons folder not found"
-        fi
-        
-        echo "✅ Web assets copied to www!"
-        echo "📂 www contents:"
+        # Копируем ВСЁ из phytonote в www
+        cp -r phytonote/* www/
+        echo "✅ Files copied!"
         ls -la www/
 
-    - name: Initialize Capacitor
+    - name: Build with Capacitor
       run: |
-        npx cap init "PhytoNote" "com.phytonote.app" --web-dir www
+        npx cap init PhytoNote com.phytonote.app --web-dir www
         npx cap add android
-        npx cap update
         npx cap sync
 
     - name: Setup app icons
       run: |
-        echo "🎨 Setting up app icons..."
-        
-        # Определяем путь к иконкам
-        ICON_PATH="assets/phytonote/icons"
-        if [ ! -d "$ICON_PATH" ]; then
-          ICON_PATH="phytonote/assets/phytonote/icons"
-        fi
-        if [ ! -d "$ICON_PATH" ]; then
-          ICON_PATH="assets/icons"
-        fi
-        if [ ! -d "$ICON_PATH" ]; then
-          ICON_PATH="icons"
-        fi
-        
-        echo "📂 Looking for icons in: $ICON_PATH"
-        ls -la $ICON_PATH 2>/dev/null || echo "⚠️ Icon folder not found"
+        echo "🎨 Setting up icons..."
         
         # Создаём папки для иконок
         mkdir -p android/app/src/main/res/mipmap-mdpi
@@ -108,53 +53,52 @@ jobs:
         mkdir -p android/app/src/main/res/mipmap-xxhdpi
         mkdir -p android/app/src/main/res/mipmap-xxxhdpi
         
-        # Функция для копирования иконки
-        copy_icon() {
-          local size=$1
-          local density=$2
-          local filename=$3
-          
-          if [ -f "$ICON_PATH/$filename" ]; then
-            echo "✅ Found $filename"
-            cp "$ICON_PATH/$filename" "android/app/src/main/res/mipmap-$density/ic_launcher.png"
-            cp "$ICON_PATH/$filename" "android/app/src/main/res/mipmap-$density/ic_launcher_round.png"
-            return 0
-          else
-            echo "⚠️ $filename not found in $ICON_PATH"
-            return 1
-          fi
-        }
+        # Путь к иконкам (в папке phytonote/icons/)
+        ICON_PATH="phytonote/icons"
+        
+        echo "📂 Looking for icons in: $ICON_PATH"
+        ls -la $ICON_PATH
         
         # Копируем иконки по размерам
-        copy_icon 48 mdpi icon-48.png
-        copy_icon 72 hdpi icon-72.png
-        copy_icon 96 xhdpi icon-96.png
-        copy_icon 144 xxhdpi icon-144.png
-        copy_icon 192 xxxhdpi icon-192.png
-        
-        # Если есть 512, используем как запасной
-        if [ -f "$ICON_PATH/icon-512.png" ]; then
-          echo "✅ Found icon-512.png, using as fallback..."
-          cp "$ICON_PATH/icon-512.png" android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-          cp "$ICON_PATH/icon-512.png" android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+        # 48×48 → mdpi
+        if [ -f "$ICON_PATH/icon-48.png" ]; then
+          cp "$ICON_PATH/icon-48.png" android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          cp "$ICON_PATH/icon-48.png" android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+          echo "✅ icon-48.png → mdpi"
         fi
         
-        echo "✅ Icons installation complete!"
-        echo "📂 Checking installed icons:"
-        find android/app/src/main/res -name "ic_launcher*" | head -10
-
-    - name: Fix AndroidManifest for launcher icon
-      run: |
-        MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
-        if [ -f "$MANIFEST_PATH" ]; then
-          # Добавляем атрибуты иконки в application
-          sed -i 's/<application/<application android:icon="@mipmap\/ic_launcher" android:roundIcon="@mipmap\/ic_launcher_round"/' "$MANIFEST_PATH"
-          echo "✅ AndroidManifest updated"
+        # 72×72 → hdpi
+        if [ -f "$ICON_PATH/icon-72.png" ]; then
+          cp "$ICON_PATH/icon-72.png" android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          cp "$ICON_PATH/icon-72.png" android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
+          echo "✅ icon-72.png → hdpi"
         fi
+        
+        # 96×96 → xhdpi
+        if [ -f "$ICON_PATH/icon-96.png" ]; then
+          cp "$ICON_PATH/icon-96.png" android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          cp "$ICON_PATH/icon-96.png" android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
+          echo "✅ icon-96.png → xhdpi"
+        fi
+        
+        # 144×144 → xxhdpi
+        if [ -f "$ICON_PATH/icon-144.png" ]; then
+          cp "$ICON_PATH/icon-144.png" android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          cp "$ICON_PATH/icon-144.png" android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
+          echo "✅ icon-144.png → xxhdpi"
+        fi
+        
+        # 192×192 → xxxhdpi
+        if [ -f "$ICON_PATH/icon-192.png" ]; then
+          cp "$ICON_PATH/icon-192.png" android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          cp "$ICON_PATH/icon-192.png" android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+          echo "✅ icon-192.png → xxxhdpi"
+        fi
+        
+        echo "✅ All icons installed!"
 
-    - name: Create keystore for signing
+    - name: Create keystore
       run: |
-        echo "🔐 Creating keystore..."
         keytool -genkey -v \
           -keystore phytonote.keystore \
           -alias phytonote \
@@ -164,61 +108,40 @@ jobs:
           -storepass phytonote123 \
           -keypass phytonote123 \
           -dname "CN=PhytoNote, OU=App, O=PhytoNote, L=City, S=State, C=US"
-        echo "✅ Keystore created"
 
-    - name: Configure release signing in gradle
+    - name: Configure signing
       run: |
-        GRADLE_PATH="android/app/build.gradle"
-        if [ -f "$GRADLE_PATH" ]; then
-          # Добавляем signingConfigs
-          sed -i '/android {/a \    signingConfigs {\n        release {\n            storeFile file("../../../phytonote.keystore")\n            storePassword "phytonote123"\n            keyAlias "phytonote"\n            keyPassword "phytonote123"\n        }\n    }' "$GRADLE_PATH"
-          
-          # Добавляем signingConfig в release build
-          sed -i '/release {/a \            signingConfig signingConfigs.release' "$GRADLE_PATH"
-          
-          echo "✅ Gradle configured for release signing"
-        fi
+        cd android
+        cat >> app/build.gradle << 'EOF'
 
-    - name: Set version code
-      run: |
-        GRADLE_PATH="android/app/build.gradle"
-        if [ -f "$GRADLE_PATH" ]; then
-          # Увеличиваем versionCode при каждой сборке
-          CURRENT_VERSION=$(grep -o 'versionCode [0-9]*' "$GRADLE_PATH" | awk '{print $2}')
-          if [ -z "$CURRENT_VERSION" ]; then
-            CURRENT_VERSION=1
-          fi
-          NEW_VERSION=$((CURRENT_VERSION + 1))
-          sed -i "s/versionCode [0-9]*/versionCode $NEW_VERSION/" "$GRADLE_PATH"
-          echo "✅ Version updated: versionCode=$NEW_VERSION"
-        fi
+        android {
+            signingConfigs {
+                release {
+                    storeFile file("../../../phytonote.keystore")
+                    storePassword "phytonote123"
+                    keyAlias "phytonote"
+                    keyPassword "phytonote123"
+                }
+            }
+            buildTypes {
+                release {
+                    signingConfig signingConfigs.release
+                }
+            }
+        }
+        EOF
+        
+        echo "✅ Signing configured"
 
-    - name: Build Release APK
+    - name: Build APK
       run: |
         cd android
         chmod +x ./gradlew
-        ./gradlew clean
         ./gradlew assembleRelease
-        
-        # Проверяем результат
-        if [ -f "app/build/outputs/apk/release/app-release.apk" ]; then
-          echo "✅ Release APK built successfully!"
-          ls -la app/build/outputs/apk/release/
-        else
-          echo "❌ Release APK not found, trying debug..."
-          ./gradlew assembleDebug
-        fi
 
-    - name: Upload Release APK
+    - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: phytonote-apk-release
+        name: phytonote-apk
         path: android/app/build/outputs/apk/release/app-release.apk
-        retention-days: 7
-
-    - name: Upload Debug APK (fallback)
-      uses: actions/upload-artifact@v4
-      with:
-        name: phytonote-apk-debug
-        path: android/app/build/outputs/apk/debug/app-debug.apk
         retention-days: 7

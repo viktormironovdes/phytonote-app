@@ -17,6 +17,12 @@ jobs:
       with:
         node-version: '18'
 
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+
     - name: Create Capacitor project
       run: |
         echo '{
@@ -50,39 +56,33 @@ jobs:
       run: |
         echo "🎨 Setting up app icons..."
         
-        # Создаём папки для иконок
         mkdir -p android/app/src/main/res/mipmap-mdpi
         mkdir -p android/app/src/main/res/mipmap-hdpi
         mkdir -p android/app/src/main/res/mipmap-xhdpi
         mkdir -p android/app/src/main/res/mipmap-xxhdpi
         mkdir -p android/app/src/main/res/mipmap-xxxhdpi
         
-        # Путь к иконкам (ваши иконки лежат в assets/)
         ICON_PATH="assets/phytonote/icons"
         
-        # Проверяем, есть ли иконки
         if [ -d "$ICON_PATH" ]; then
           echo "📂 Found icons in: $ICON_PATH"
-          ls -la $ICON_PATH
           
-          # Копируем по размерам
-          [ -f "$ICON_PATH/icon-48.png" ] && cp "$ICON_PATH/icon-48.png" android/app/src/main/res/mipmap-mdpi/ic_launcher.png && echo "✅ 48px"
-          [ -f "$ICON_PATH/icon-72.png" ] && cp "$ICON_PATH/icon-72.png" android/app/src/main/res/mipmap-hdpi/ic_launcher.png && echo "✅ 72px"
-          [ -f "$ICON_PATH/icon-96.png" ] && cp "$ICON_PATH/icon-96.png" android/app/src/main/res/mipmap-xhdpi/ic_launcher.png && echo "✅ 96px"
-          [ -f "$ICON_PATH/icon-144.png" ] && cp "$ICON_PATH/icon-144.png" android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png && echo "✅ 144px"
-          [ -f "$ICON_PATH/icon-192.png" ] && cp "$ICON_PATH/icon-192.png" android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png && echo "✅ 192px"
+          [ -f "$ICON_PATH/icon-48.png" ] && cp "$ICON_PATH/icon-48.png" android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          [ -f "$ICON_PATH/icon-72.png" ] && cp "$ICON_PATH/icon-72.png" android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          [ -f "$ICON_PATH/icon-96.png" ] && cp "$ICON_PATH/icon-96.png" android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          [ -f "$ICON_PATH/icon-144.png" ] && cp "$ICON_PATH/icon-144.png" android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          [ -f "$ICON_PATH/icon-192.png" ] && cp "$ICON_PATH/icon-192.png" android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
           
-          # Копируем round иконки
           [ -f "$ICON_PATH/icon-48.png" ] && cp "$ICON_PATH/icon-48.png" android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
           [ -f "$ICON_PATH/icon-72.png" ] && cp "$ICON_PATH/icon-72.png" android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
           [ -f "$ICON_PATH/icon-96.png" ] && cp "$ICON_PATH/icon-96.png" android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
           [ -f "$ICON_PATH/icon-144.png" ] && cp "$ICON_PATH/icon-144.png" android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
           [ -f "$ICON_PATH/icon-192.png" ] && cp "$ICON_PATH/icon-192.png" android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
-        else
-          echo "⚠️ Icons not found in $ICON_PATH"
+          
+          echo "✅ Icons installed!"
         fi
 
-    - name: Fix AndroidManifest for launcher icon
+    - name: Fix AndroidManifest
       run: |
         MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
         if [ -f "$MANIFEST_PATH" ]; then
@@ -90,9 +90,8 @@ jobs:
           echo "✅ AndroidManifest updated"
         fi
 
-    - name: Create keystore for signing
+    - name: Create keystore
       run: |
-        echo "🔐 Creating keystore..."
         keytool -genkey -v \
           -keystore phytonote.keystore \
           -alias phytonote \
@@ -102,41 +101,62 @@ jobs:
           -storepass phytonote123 \
           -keypass phytonote123 \
           -dname "CN=PhytoNote, OU=App, O=PhytoNote, L=City, S=State, C=US"
-        echo "✅ Keystore created"
 
-    - name: Configure signing in gradle
+    - name: Configure signing in build.gradle
       run: |
         GRADLE_PATH="android/app/build.gradle"
-        if [ -f "$GRADLE_PATH" ]; then
-          # Добавляем signingConfigs
-          sed -i '/android {/a \    signingConfigs {\n        release {\n            storeFile file("../../../phytonote.keystore")\n            storePassword "phytonote123"\n            keyAlias "phytonote"\n            keyPassword "phytonote123"\n        }\n    }' "$GRADLE_PATH"
-          
-          # Добавляем signingConfig в release build
-          sed -i '/release {/a \            signingConfig signingConfigs.release' "$GRADLE_PATH"
-          
-          echo "✅ Gradle configured for release signing"
-        fi
+        
+        # Создаём правильный build.gradle с подписью
+        cat > $GRADLE_PATH << 'EOF'
+        apply plugin: 'com.android.application'
 
-    - name: Use custom icon as app icon
-      run: |
-        if [ -f "assets/icon-192.png" ]; then
-          echo "🎨 Found icon-192.png - setting as app icon!"
-          mkdir -p android/app/src/main/res/mipmap-hdpi
-          mkdir -p android/app/src/main/res/mipmap-mdpi
-          mkdir -p android/app/src/main/res/mipmap-xhdpi
-          mkdir -p android/app/src/main/res/mipmap-xxhdpi
-          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
+        android {
+            namespace "com.phytonote.app"
+            compileSdkVersion 34
+            defaultConfig {
+                applicationId "com.phytonote.app"
+                minSdkVersion 23
+                targetSdkVersion 34
+                versionCode 2
+                versionName "1.0.0"
+                testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+            }
+            signingConfigs {
+                release {
+                    storeFile file("../../../phytonote.keystore")
+                    storePassword "phytonote123"
+                    keyAlias "phytonote"
+                    keyPassword "phytonote123"
+                }
+            }
+            buildTypes {
+                release {
+                    signingConfig signingConfigs.release
+                    minifyEnabled false
+                    proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+                }
+            }
+        }
 
-          cp assets/icon-192.png android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-          cp assets/icon-192.png android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-          cp assets/icon-192.png android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          cp assets/icon-192.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-          cp assets/icon-192.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+        repositories {
+            flatDir {
+                dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+            }
+        }
 
-          echo "✅ Icon set successfully!"
-        else
-          echo "⚠️ icon-192.png not found - using default Capacitor icon"
-        fi
+        dependencies {
+            implementation fileTree(include: ['*.jar'], dir: 'libs')
+            implementation "androidx.appcompat:appcompat:1.6.1"
+            implementation "com.google.android.material:material:1.9.0"
+            implementation "androidx.constraintlayout:constraintlayout:2.1.4"
+            implementation project(':capacitor-android')
+            implementation project(':capacitor-cordova-android-plugins')
+        }
+
+        apply from: 'capacitor.build.gradle'
+        EOF
+        
+        echo "✅ build.gradle configured"
 
     - name: Build Android APK
       run: |

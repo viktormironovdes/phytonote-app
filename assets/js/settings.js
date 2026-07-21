@@ -3,14 +3,15 @@
 // ================================================================
 
 function saveProfile() {
-    state.user.name = document.getElementById('profileNameInput').value.trim() || 'Вы';
+    const newName = document.getElementById('profileNameInput').value.trim() || 'Вы';
+    state.user.name = newName;
     state.user.email = document.getElementById('profileEmailInput').value.trim();
     state.user.notifications = {
         push: document.getElementById('notifPush').checked,
         email: document.getElementById('notifEmail').checked,
     };
     saveState();
-    updateAvatarDisplay();
+    updateAvatarDisplay(); // ← ВАЖНО: обновляем аватар при сохранении имени
 }
 
 function loadProfile() {

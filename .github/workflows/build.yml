@@ -17,34 +17,38 @@ jobs:
       with:
         node-version: '18'
 
-    - name: Setup Java
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'zulu'
-        java-version: '17'
-
-    - name: Setup Capacitor
+    - name: Create Capacitor project
       run: |
-        npm init -y
-        npm install @capacitor/cli @capacitor/android
+        echo '{
+          "name": "PhytoNote",
+          "version": "1.0.0",
+          "scripts": {
+            "build": "echo \"Building PhytoNote...\""
+          },
+          "devDependencies": {
+            "@capacitor/cli": "^6.0.0",
+            "@capacitor/android": "^6.0.0"
+          }
+        }' > package.json
 
-    - name: Copy web files to www
+    - name: Install dependencies
+      run: npm install
+
+    - name: Copy web assets BEFORE Capacitor init
       run: |
         mkdir -p www
-        # Копируем ВСЁ из phytonote в www
-        cp -r phytonote/* www/
-        echo "✅ Files copied!"
-        ls -la www/
+        cp -r assets/* www/
+        echo "✅ All files copied to www!"
 
-    - name: Build with Capacitor
+    - name: Initialize Capacitor and add Android
       run: |
-        npx cap init PhytoNote com.phytonote.app --web-dir www
+        npx cap init "PhytoNote" "com.phytonote.app" --web-dir www
         npx cap add android
-        npx cap sync
+        npx cap update
 
     - name: Setup app icons
       run: |
-        echo "🎨 Setting up icons..."
+        echo "🎨 Setting up app icons..."
         
         # Создаём папки для иконок
         mkdir -p android/app/src/main/res/mipmap-mdpi
@@ -53,52 +57,42 @@ jobs:
         mkdir -p android/app/src/main/res/mipmap-xxhdpi
         mkdir -p android/app/src/main/res/mipmap-xxxhdpi
         
-        # Путь к иконкам (в папке phytonote/icons/)
-        ICON_PATH="phytonote/icons"
+        # Путь к иконкам (ваши иконки лежат в assets/)
+        ICON_PATH="assets/phytonote/icons"
         
-        echo "📂 Looking for icons in: $ICON_PATH"
-        ls -la $ICON_PATH
-        
-        # Копируем иконки по размерам
-        # 48×48 → mdpi
-        if [ -f "$ICON_PATH/icon-48.png" ]; then
-          cp "$ICON_PATH/icon-48.png" android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-          cp "$ICON_PATH/icon-48.png" android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
-          echo "✅ icon-48.png → mdpi"
+        # Проверяем, есть ли иконки
+        if [ -d "$ICON_PATH" ]; then
+          echo "📂 Found icons in: $ICON_PATH"
+          ls -la $ICON_PATH
+          
+          # Копируем по размерам
+          [ -f "$ICON_PATH/icon-48.png" ] && cp "$ICON_PATH/icon-48.png" android/app/src/main/res/mipmap-mdpi/ic_launcher.png && echo "✅ 48px"
+          [ -f "$ICON_PATH/icon-72.png" ] && cp "$ICON_PATH/icon-72.png" android/app/src/main/res/mipmap-hdpi/ic_launcher.png && echo "✅ 72px"
+          [ -f "$ICON_PATH/icon-96.png" ] && cp "$ICON_PATH/icon-96.png" android/app/src/main/res/mipmap-xhdpi/ic_launcher.png && echo "✅ 96px"
+          [ -f "$ICON_PATH/icon-144.png" ] && cp "$ICON_PATH/icon-144.png" android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png && echo "✅ 144px"
+          [ -f "$ICON_PATH/icon-192.png" ] && cp "$ICON_PATH/icon-192.png" android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png && echo "✅ 192px"
+          
+          # Копируем round иконки
+          [ -f "$ICON_PATH/icon-48.png" ] && cp "$ICON_PATH/icon-48.png" android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+          [ -f "$ICON_PATH/icon-72.png" ] && cp "$ICON_PATH/icon-72.png" android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
+          [ -f "$ICON_PATH/icon-96.png" ] && cp "$ICON_PATH/icon-96.png" android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
+          [ -f "$ICON_PATH/icon-144.png" ] && cp "$ICON_PATH/icon-144.png" android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
+          [ -f "$ICON_PATH/icon-192.png" ] && cp "$ICON_PATH/icon-192.png" android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+        else
+          echo "⚠️ Icons not found in $ICON_PATH"
         fi
-        
-        # 72×72 → hdpi
-        if [ -f "$ICON_PATH/icon-72.png" ]; then
-          cp "$ICON_PATH/icon-72.png" android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-          cp "$ICON_PATH/icon-72.png" android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
-          echo "✅ icon-72.png → hdpi"
-        fi
-        
-        # 96×96 → xhdpi
-        if [ -f "$ICON_PATH/icon-96.png" ]; then
-          cp "$ICON_PATH/icon-96.png" android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          cp "$ICON_PATH/icon-96.png" android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
-          echo "✅ icon-96.png → xhdpi"
-        fi
-        
-        # 144×144 → xxhdpi
-        if [ -f "$ICON_PATH/icon-144.png" ]; then
-          cp "$ICON_PATH/icon-144.png" android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-          cp "$ICON_PATH/icon-144.png" android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
-          echo "✅ icon-144.png → xxhdpi"
-        fi
-        
-        # 192×192 → xxxhdpi
-        if [ -f "$ICON_PATH/icon-192.png" ]; then
-          cp "$ICON_PATH/icon-192.png" android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-          cp "$ICON_PATH/icon-192.png" android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
-          echo "✅ icon-192.png → xxxhdpi"
-        fi
-        
-        echo "✅ All icons installed!"
 
-    - name: Create keystore
+    - name: Fix AndroidManifest for launcher icon
       run: |
+        MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
+        if [ -f "$MANIFEST_PATH" ]; then
+          sed -i 's/<application/<application android:icon="@mipmap\/ic_launcher" android:roundIcon="@mipmap\/ic_launcher_round"/' "$MANIFEST_PATH"
+          echo "✅ AndroidManifest updated"
+        fi
+
+    - name: Create keystore for signing
+      run: |
+        echo "🔐 Creating keystore..."
         keytool -genkey -v \
           -keystore phytonote.keystore \
           -alias phytonote \
@@ -108,32 +102,43 @@ jobs:
           -storepass phytonote123 \
           -keypass phytonote123 \
           -dname "CN=PhytoNote, OU=App, O=PhytoNote, L=City, S=State, C=US"
+        echo "✅ Keystore created"
 
-    - name: Configure signing
+    - name: Configure signing in gradle
       run: |
-        cd android
-        cat >> app/build.gradle << 'EOF'
+        GRADLE_PATH="android/app/build.gradle"
+        if [ -f "$GRADLE_PATH" ]; then
+          # Добавляем signingConfigs
+          sed -i '/android {/a \    signingConfigs {\n        release {\n            storeFile file("../../../phytonote.keystore")\n            storePassword "phytonote123"\n            keyAlias "phytonote"\n            keyPassword "phytonote123"\n        }\n    }' "$GRADLE_PATH"
+          
+          # Добавляем signingConfig в release build
+          sed -i '/release {/a \            signingConfig signingConfigs.release' "$GRADLE_PATH"
+          
+          echo "✅ Gradle configured for release signing"
+        fi
 
-        android {
-            signingConfigs {
-                release {
-                    storeFile file("../../../phytonote.keystore")
-                    storePassword "phytonote123"
-                    keyAlias "phytonote"
-                    keyPassword "phytonote123"
-                }
-            }
-            buildTypes {
-                release {
-                    signingConfig signingConfigs.release
-                }
-            }
-        }
-        EOF
-        
-        echo "✅ Signing configured"
+    - name: Use custom icon as app icon
+      run: |
+        if [ -f "assets/icon-192.png" ]; then
+          echo "🎨 Found icon-192.png - setting as app icon!"
+          mkdir -p android/app/src/main/res/mipmap-hdpi
+          mkdir -p android/app/src/main/res/mipmap-mdpi
+          mkdir -p android/app/src/main/res/mipmap-xhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
 
-    - name: Build APK
+          cp assets/icon-192.png android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          cp assets/icon-192.png android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          cp assets/icon-192.png android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          cp assets/icon-192.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          cp assets/icon-192.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+
+          echo "✅ Icon set successfully!"
+        else
+          echo "⚠️ icon-192.png not found - using default Capacitor icon"
+        fi
+
+    - name: Build Android APK
       run: |
         cd android
         chmod +x ./gradlew

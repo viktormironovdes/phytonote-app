@@ -36,6 +36,7 @@ let state = {
     isExpanded: false,
     selectedCalendarDate: null,
     detailTab: 'main',
+    historyFilter: 'all',
     catalogLoaded: false,
 };
 
@@ -81,11 +82,10 @@ function loadState() {
                 };
             }
             
-            // Миграция: если есть старые поля last_*, переносим в историю
+            // Миграция: старые поля last_* → history
             state.flowers.forEach(flower => {
                 if (!flower.history) flower.history = [];
                 
-                // Переносим last_watering
                 if (flower.last_watering) {
                     const hasEvent = flower.history.some(h => 
                         h.type === 'watering' && h.date === flower.last_watering
@@ -95,13 +95,12 @@ function loadState() {
                             id: 'hist_' + generateUUID(),
                             date: flower.last_watering,
                             type: 'watering',
-                            notes: 'Перенесено из старых данных'
+                            text: ''
                         });
                     }
                     delete flower.last_watering;
                 }
                 
-                // Переносим last_fertilizing
                 if (flower.last_fertilizing) {
                     const hasEvent = flower.history.some(h => 
                         h.type === 'fertilizing' && h.date === flower.last_fertilizing
@@ -111,13 +110,12 @@ function loadState() {
                             id: 'hist_' + generateUUID(),
                             date: flower.last_fertilizing,
                             type: 'fertilizing',
-                            notes: 'Перенесено из старых данных'
+                            text: ''
                         });
                     }
                     delete flower.last_fertilizing;
                 }
                 
-                // Переносим last_repotting
                 if (flower.last_repotting) {
                     const hasEvent = flower.history.some(h => 
                         h.type === 'repotting' && h.date === flower.last_repotting
@@ -127,7 +125,7 @@ function loadState() {
                             id: 'hist_' + generateUUID(),
                             date: flower.last_repotting,
                             type: 'repotting',
-                            notes: 'Перенесено из старых данных'
+                            text: ''
                         });
                     }
                     delete flower.last_repotting;
@@ -196,22 +194,32 @@ function getHistoryByFlower(flowerId) {
     return flower.history.sort((a, b) => b.date.localeCompare(a.date));
 }
 
-function addHistoryEvent(flower, type, date, notes = '') {
+function addHistoryEvent(flower, type, date, text = '') {
     if (!flower.history) flower.history = [];
+    
+    // Проверяем дубликат (для полива/подкормки/пересадки)
+    if (type !== 'note') {
+        const exists = flower.history.some(h => h.date === date && h.type === type);
+        if (exists) return false;
+    }
+    
     flower.history.push({
         id: 'hist_' + generateUUID(),
         date: date || getLocalDateStr(new Date()),
         type: type,
-        notes: notes || ''
+        text: text || ''
     });
     flower.history.sort((a, b) => b.date.localeCompare(a.date));
+    return true;
 }
 
-function updateHistoryEvent(flower, eventId, newDate, newNotes) {
+function updateHistoryEvent(flower, eventId, newDate, newType, newText) {
     const event = flower.history.find(h => h.id === eventId);
     if (event) {
         if (newDate) event.date = newDate;
-        if (newNotes !== undefined) event.notes = newNotes;
+        if (newType) event.type = newType;
+        if (newText !== undefined) event.text = newText;
+        flower.history.sort((a, b) => b.date.localeCompare(a.date));
     }
 }
 

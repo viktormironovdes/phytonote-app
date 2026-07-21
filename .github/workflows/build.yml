@@ -102,61 +102,24 @@ jobs:
           -keypass phytonote123 \
           -dname "CN=PhytoNote, OU=App, O=PhytoNote, L=City, S=State, C=US"
 
-    - name: Configure signing in build.gradle
+    - name: Add signing config to existing build.gradle
       run: |
         GRADLE_PATH="android/app/build.gradle"
         
-        # Создаём правильный build.gradle с подписью
-        cat > $GRADLE_PATH << 'EOF'
-        apply plugin: 'com.android.application'
-
-        android {
-            namespace "com.phytonote.app"
-            compileSdkVersion 34
-            defaultConfig {
-                applicationId "com.phytonote.app"
-                minSdkVersion 23
-                targetSdkVersion 34
-                versionCode 2
-                versionName "1.0.0"
-                testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-            }
-            signingConfigs {
-                release {
-                    storeFile file("../../../phytonote.keystore")
-                    storePassword "phytonote123"
-                    keyAlias "phytonote"
-                    keyPassword "phytonote123"
-                }
-            }
-            buildTypes {
-                release {
-                    signingConfig signingConfigs.release
-                    minifyEnabled false
-                    proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-                }
-            }
-        }
-
-        repositories {
-            flatDir {
-                dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
-            }
-        }
-
-        dependencies {
-            implementation fileTree(include: ['*.jar'], dir: 'libs')
-            implementation "androidx.appcompat:appcompat:1.6.1"
-            implementation "com.google.android.material:material:1.9.0"
-            implementation "androidx.constraintlayout:constraintlayout:2.1.4"
-            implementation project(':capacitor-android')
-            implementation project(':capacitor-cordova-android-plugins')
-        }
-
-        apply from: 'capacitor.build.gradle'
-        EOF
-        
-        echo "✅ build.gradle configured"
+        # Проверяем, есть ли уже signingConfigs
+        if grep -q "signingConfigs" "$GRADLE_PATH"; then
+          echo "✅ signingConfigs already exists"
+        else
+          echo "📝 Adding signingConfigs to build.gradle"
+          
+          # Добавляем signingConfigs после android {
+          sed -i '/android {/a \    signingConfigs {\n        release {\n            storeFile file("../../../phytonote.keystore")\n            storePassword "phytonote123"\n            keyAlias "phytonote"\n            keyPassword "phytonote123"\n        }\n    }' "$GRADLE_PATH"
+          
+          # Добавляем signingConfig в release
+          sed -i '/release {/a \            signingConfig signingConfigs.release' "$GRADLE_PATH"
+          
+          echo "✅ signingConfigs added"
+        fi
 
     - name: Build Android APK
       run: |

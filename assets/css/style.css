@@ -66,7 +66,7 @@ body {
 }
 
 /* ================================================================
-   CARDS - АВАТАР КРУПНЕЕ (почти до границ)
+   CARDS
    ================================================================ */
 .card {
     background: white;
@@ -376,18 +376,40 @@ body {
     transition: 0.2s;
 }
 .calendar-grid .day:active { transform: scale(0.95); }
-.calendar-grid .day .dots { display: flex; gap: 3px; margin-top: 2px; }
-.calendar-grid .day .dots .dot { width: 8px; height: 8px; border-radius: 50%; }
-.dot.orange { background: #e8b830; }
-.dot.green { background: #3a9e3a; }
+.calendar-grid .day .dots {
+    display: flex;
+    gap: 3px;
+    margin-top: 2px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.calendar-grid .day .dots .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
 .calendar-grid .day.other-month { opacity: 0.3; }
-.calendar-grid .weekday { font-size: 11px; color: #7a8f7a; text-align: center; padding: 4px 0; }
+.calendar-grid .weekday {
+    font-size: 11px;
+    color: #7a8f7a;
+    text-align: center;
+    padding: 4px 0;
+}
 .calendar-grid .day.active {
     background: #e4ece4;
 }
 .calendar-grid .day.selected {
     background: #d4e0d4;
 }
+
+/* Цвета точек в календаре */
+.dot.orange { background: #e8b830; }
+.dot.green { background: #3a9e3a; }
+.dot.purple { background: #9b59b6; }
+.dot.orange-done { background: #e67e22; }
+.dot.orange-light { background: #f39c12; }
+.dot.orange-dark { background: #d35400; }
+.dot.blue { background: #4a90d9; }
 
 .event-plank {
     background: white;
@@ -662,7 +684,7 @@ body {
 }
 
 /* ================================================================
-   DETAIL VIEW (Карточка растения)
+   DETAIL VIEW (Карточка растения) - ФОТО 1:2
    ================================================================ */
 .detail-header {
     position: relative;
@@ -675,8 +697,8 @@ body {
 }
 .detail-header .photo-container {
     width: 100%;
-    min-height: 120px;
-    max-height: 200px;
+    min-height: 140px;
+    height: 200px;
     overflow: hidden;
     display: flex;
     align-items: center;
@@ -687,14 +709,13 @@ body {
 }
 .detail-header .photo-container img {
     width: 100%;
-    height: auto;
-    max-height: 200px;
+    height: 100%;
     object-fit: cover;
     display: block;
 }
 .detail-header .photo-container .no-photo {
     width: 100%;
-    min-height: 120px;
+    height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -843,6 +864,7 @@ body {
     padding: 4px 0;
     border-bottom: 1px dashed #eef3ee;
     align-items: center;
+    gap: 8px;
 }
 .history-item button {
     margin-left: 4px;
@@ -981,45 +1003,17 @@ body {
 }
 
 /* ================================================================
-   DETAIL ACTIONS
+   DETAIL ACTIONS (второстепенные кнопки)
    ================================================================ */
-.detail-actions-main {
-    display: flex;
-    gap: 8px;
-    padding: 8px 20px 8px 20px;
-    flex-shrink: 0;
-    border-top: 1px solid #eef3ee;
-}
-.detail-actions-main .btn {
-    flex: 1;
-    padding: 14px 10px;
-    font-size: 16px;
-    font-weight: 600;
-    margin-top: 0;
-    border-radius: 12px;
-    background: #1e3a1e;
-    color: white;
-    border: none;
-    cursor: pointer;
-    transition: 0.2s;
-}
-.detail-actions-main .btn:active {
-    transform: scale(0.97);
-}
-.detail-actions-main .btn-success {
-    background: #3a7a3a;
-}
-.detail-actions-main .btn-success:active {
-    background: #2d6a2d;
-}
-
 .detail-actions-secondary {
     display: flex;
     gap: 8px;
-    padding: 4px 20px 12px 20px;
+    padding: 8px 20px 12px 20px;
     flex-shrink: 0;
     justify-content: center;
     flex-wrap: wrap;
+    border-top: 1px solid #eef3ee;
+    margin-top: 8px;
 }
 .detail-actions-secondary .btn-sm {
     font-size: 12px;
@@ -1044,6 +1038,12 @@ body {
 }
 .detail-actions-secondary .btn-sm.btn-danger:hover {
     background: #fdf0f0;
+}
+.detail-actions-secondary .readonly-badge {
+    margin: auto;
+    display: block;
+    text-align: center;
+    padding: 8px;
 }
 
 /* ================================================================
@@ -1205,14 +1205,6 @@ body {
     .info-fact-item .fact-text {
         font-size: 12px;
     }
-    .detail-actions-main .btn {
-        padding: 12px 8px;
-        font-size: 14px;
-    }
-    .detail-actions-secondary .btn-sm {
-        font-size: 11px;
-        padding: 3px 10px;
-    }
     #detailModal .modal-content {
         height: 100vh;
         max-height: 100vh;
@@ -1220,10 +1212,11 @@ body {
     }
     .detail-header .photo-container {
         min-height: 100px;
-        max-height: 160px;
+        height: 160px;
     }
     .detail-header .photo-container .no-photo {
         min-height: 100px;
+        height: 160px;
         font-size: 40px;
     }
     .card .avatar {
@@ -1233,17 +1226,22 @@ body {
         min-height: 60px;
         font-size: 28px;
     }
+    .detail-actions-secondary .btn-sm {
+        font-size: 11px;
+        padding: 3px 10px;
+    }
+    .history-item {
+        font-size: 12px;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+    .history-item button {
+        font-size: 10px;
+        padding: 2px 6px;
+    }
 }
 
 @media (max-width: 380px) {
-    .detail-actions-main {
-        flex-wrap: wrap;
-    }
-    .detail-actions-main .btn {
-        flex: 1 1 30%;
-        padding: 10px 6px;
-        font-size: 12px;
-    }
     .detail-actions-secondary {
         gap: 4px;
     }
@@ -1257,5 +1255,24 @@ body {
         min-width: 52px;
         min-height: 52px;
         font-size: 24px;
+    }
+    .detail-header .photo-container {
+        min-height: 80px;
+        height: 130px;
+    }
+    .detail-header .photo-container .no-photo {
+        min-height: 80px;
+        height: 130px;
+        font-size: 32px;
+    }
+    .history-item {
+        font-size: 11px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+    }
+    .history-item button {
+        font-size: 10px;
+        padding: 1px 6px;
     }
 }

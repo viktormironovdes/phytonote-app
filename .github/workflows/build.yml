@@ -12,6 +12,14 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: List files (debug)
+      run: |
+        echo "📂 Current directory contents:"
+        ls -la
+        echo ""
+        echo "📂 Looking for phytonote folder:"
+        ls -la phytonote/ 2>/dev/null || echo "phytonote folder not found"
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
@@ -40,16 +48,32 @@ jobs:
     - name: Install dependencies
       run: npm install
 
-    - name: Copy web assets
+    - name: Copy web assets (from phytonote folder)
       run: |
         mkdir -p www
-        cp index.html www/
-        cp manifest.json www/
-        cp sw.js www/
-        cp -r css www/
-        cp -r js www/
-        cp -r icons www/ 2>/dev/null || true
+        
+        # Копируем из папки phytonote
+        if [ -d "phytonote" ]; then
+          echo "📂 Copying from phytonote/ folder..."
+          cp phytonote/index.html www/
+          cp phytonote/manifest.json www/
+          cp phytonote/sw.js www/
+          cp -r phytonote/css www/
+          cp -r phytonote/js www/
+          cp -r phytonote/icons www/ 2>/dev/null || true
+        else
+          echo "📂 Copying from root folder..."
+          cp index.html www/ 2>/dev/null || echo "⚠️ index.html not found in root"
+          cp manifest.json www/ 2>/dev/null || echo "⚠️ manifest.json not found in root"
+          cp sw.js www/ 2>/dev/null || echo "⚠️ sw.js not found in root"
+          cp -r css www/ 2>/dev/null || echo "⚠️ css folder not found"
+          cp -r js www/ 2>/dev/null || echo "⚠️ js folder not found"
+          cp -r icons www/ 2>/dev/null || echo "⚠️ icons folder not found"
+        fi
+        
         echo "✅ Web assets copied to www!"
+        echo "📂 www contents:"
+        ls -la www/
 
     - name: Initialize Capacitor
       run: |
@@ -58,9 +82,24 @@ jobs:
         npx cap update
         npx cap sync
 
-    - name: Setup app icons for all densities
+    - name: Setup app icons
       run: |
         echo "🎨 Setting up app icons..."
+        
+        # Определяем путь к иконкам
+        ICON_PATH="assets/phytonote/icons"
+        if [ ! -d "$ICON_PATH" ]; then
+          ICON_PATH="phytonote/assets/phytonote/icons"
+        fi
+        if [ ! -d "$ICON_PATH" ]; then
+          ICON_PATH="assets/icons"
+        fi
+        if [ ! -d "$ICON_PATH" ]; then
+          ICON_PATH="icons"
+        fi
+        
+        echo "📂 Looking for icons in: $ICON_PATH"
+        ls -la $ICON_PATH 2>/dev/null || echo "⚠️ Icon folder not found"
         
         # Создаём папки для иконок
         mkdir -p android/app/src/main/res/mipmap-mdpi
@@ -69,44 +108,40 @@ jobs:
         mkdir -p android/app/src/main/res/mipmap-xxhdpi
         mkdir -p android/app/src/main/res/mipmap-xxxhdpi
         
-        # Копируем подготовленные иконки
-        # 48×48 → mdpi
-        if [ -f "assets/phytonote/icons/icon-48.png" ]; then
-          cp assets/phytonote/icons/icon-48.png android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-          cp assets/phytonote/icons/icon-48.png android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+        # Функция для копирования иконки
+        copy_icon() {
+          local size=$1
+          local density=$2
+          local filename=$3
+          
+          if [ -f "$ICON_PATH/$filename" ]; then
+            echo "✅ Found $filename"
+            cp "$ICON_PATH/$filename" "android/app/src/main/res/mipmap-$density/ic_launcher.png"
+            cp "$ICON_PATH/$filename" "android/app/src/main/res/mipmap-$density/ic_launcher_round.png"
+            return 0
+          else
+            echo "⚠️ $filename not found in $ICON_PATH"
+            return 1
+          fi
+        }
+        
+        # Копируем иконки по размерам
+        copy_icon 48 mdpi icon-48.png
+        copy_icon 72 hdpi icon-72.png
+        copy_icon 96 xhdpi icon-96.png
+        copy_icon 144 xxhdpi icon-144.png
+        copy_icon 192 xxxhdpi icon-192.png
+        
+        # Если есть 512, используем как запасной
+        if [ -f "$ICON_PATH/icon-512.png" ]; then
+          echo "✅ Found icon-512.png, using as fallback..."
+          cp "$ICON_PATH/icon-512.png" android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          cp "$ICON_PATH/icon-512.png" android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
         fi
         
-        # 72×72 → hdpi
-        if [ -f "assets/phytonote/icons/icon-72.png" ]; then
-          cp assets/phytonote/icons/icon-72.png android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-          cp assets/phytonote/icons/icon-72.png android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
-        fi
-        
-        # 96×96 → xhdpi
-        if [ -f "assets/phytonote/icons/icon-96.png" ]; then
-          cp assets/phytonote/icons/icon-96.png android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          cp assets/phytonote/icons/icon-96.png android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
-        fi
-        
-        # 144×144 → xxhdpi
-        if [ -f "assets/phytonote/icons/icon-144.png" ]; then
-          cp assets/phytonote/icons/icon-144.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-          cp assets/phytonote/icons/icon-144.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
-        fi
-        
-        # 192×192 → xxxhdpi
-        if [ -f "assets/phytonote/icons/icon-192.png" ]; then
-          cp assets/phytonote/icons/icon-192.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-          cp assets/phytonote/icons/icon-192.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
-        fi
-        
-        # Если есть 512×512, используем для всех (запасной вариант)
-        if [ -f "assets/phytonote/icons/icon-512.png" ]; then
-          cp assets/phytonote/icons/icon-512.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-          cp assets/phytonote/icons/icon-512.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
-        fi
-        
-        echo "✅ Icons installed successfully!"
+        echo "✅ Icons installation complete!"
+        echo "📂 Checking installed icons:"
+        find android/app/src/main/res -name "ic_launcher*" | head -10
 
     - name: Fix AndroidManifest for launcher icon
       run: |
@@ -129,29 +164,33 @@ jobs:
           -storepass phytonote123 \
           -keypass phytonote123 \
           -dname "CN=PhytoNote, OU=App, O=PhytoNote, L=City, S=State, C=US"
-        echo "✅ Keystore created: phytonote.keystore"
+        echo "✅ Keystore created"
 
     - name: Configure release signing in gradle
       run: |
         GRADLE_PATH="android/app/build.gradle"
         if [ -f "$GRADLE_PATH" ]; then
-          # Добавляем signingConfigs после android {
+          # Добавляем signingConfigs
           sed -i '/android {/a \    signingConfigs {\n        release {\n            storeFile file("../../../phytonote.keystore")\n            storePassword "phytonote123"\n            keyAlias "phytonote"\n            keyPassword "phytonote123"\n        }\n    }' "$GRADLE_PATH"
           
-          # Добавляем signingConfig в release build (после release {)
+          # Добавляем signingConfig в release build
           sed -i '/release {/a \            signingConfig signingConfigs.release' "$GRADLE_PATH"
           
           echo "✅ Gradle configured for release signing"
         fi
 
-    - name: Set version code and name in gradle
+    - name: Set version code
       run: |
         GRADLE_PATH="android/app/build.gradle"
         if [ -f "$GRADLE_PATH" ]; then
-          # Устанавливаем versionCode и versionName
-          sed -i 's/versionCode 1/versionCode 2/' "$GRADLE_PATH"
-          sed -i 's/versionName "1.0"/versionName "1.0.0"/' "$GRADLE_PATH"
-          echo "✅ Version set: versionCode=2, versionName=1.0.0"
+          # Увеличиваем versionCode при каждой сборке
+          CURRENT_VERSION=$(grep -o 'versionCode [0-9]*' "$GRADLE_PATH" | awk '{print $2}')
+          if [ -z "$CURRENT_VERSION" ]; then
+            CURRENT_VERSION=1
+          fi
+          NEW_VERSION=$((CURRENT_VERSION + 1))
+          sed -i "s/versionCode [0-9]*/versionCode $NEW_VERSION/" "$GRADLE_PATH"
+          echo "✅ Version updated: versionCode=$NEW_VERSION"
         fi
 
     - name: Build Release APK
@@ -161,12 +200,12 @@ jobs:
         ./gradlew clean
         ./gradlew assembleRelease
         
-        # Проверяем, создался ли APK
+        # Проверяем результат
         if [ -f "app/build/outputs/apk/release/app-release.apk" ]; then
-          echo "✅ APK built successfully!"
+          echo "✅ Release APK built successfully!"
           ls -la app/build/outputs/apk/release/
         else
-          echo "❌ APK not found! Trying debug build..."
+          echo "❌ Release APK not found, trying debug..."
           ./gradlew assembleDebug
         fi
 

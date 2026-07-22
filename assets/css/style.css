@@ -374,6 +374,7 @@ body {
     justify-content: center;
     cursor: pointer;
     transition: 0.2s;
+    position: relative;
 }
 .calendar-grid .day:active { transform: scale(0.95); }
 .calendar-grid .day .dots {
@@ -405,11 +406,6 @@ body {
 /* Цвета точек в календаре */
 .dot.orange { background: #e8b830; }
 .dot.green { background: #3a9e3a; }
-.dot.purple { background: #9b59b6; }
-.dot.orange-done { background: #e67e22; }
-.dot.orange-light { background: #f39c12; }
-.dot.orange-dark { background: #d35400; }
-.dot.blue { background: #4a90d9; }
 
 .event-plank {
     background: white;
@@ -684,7 +680,7 @@ body {
 }
 
 /* ================================================================
-   DETAIL VIEW (Карточка растения) - ФОТО 1:2
+   DETAIL VIEW (Карточка растения)
    ================================================================ */
 .detail-header {
     position: relative;
@@ -704,7 +700,7 @@ body {
     align-items: center;
     justify-content: center;
     background: #e4ece4;
-    cursor: pointer;
+    cursor: default;
     position: relative;
 }
 .detail-header .photo-container img {
@@ -965,7 +961,7 @@ body {
 }
 
 /* ================================================================
-   DETAIL TABS
+   DETAIL TABS (УВЕЛИЧЕННЫЙ ТЕКСТ)
    ================================================================ */
 .detail-tabs {
     display: flex;
@@ -979,9 +975,9 @@ body {
     flex: 1;
     background: none;
     border: none;
-    padding: 10px 8px;
-    font-size: 13px;
-    font-weight: 500;
+    padding: 12px 8px;
+    font-size: 15px;
+    font-weight: 600;
     color: #7a8f7a;
     cursor: pointer;
     border-bottom: 2px solid transparent;
@@ -1104,16 +1100,17 @@ body {
 }
 
 /* ================================================================
-   FULLSCREEN DETAIL MODAL
+   FULLSCREEN DETAIL MODAL (ПОДВАЛ ВИДЕН)
    ================================================================ */
 #detailModal .modal-content {
-    height: 95vh;
-    max-height: 95vh;
-    border-radius: 0;
-    padding: 0;
-}
-#detailModal .modal-content .modal-scroll {
+    height: 85vh;
+    max-height: 85vh;
+    border-radius: 24px 24px 0 0;
     padding-bottom: 0;
+}
+
+#detailModal {
+    z-index: 90;
 }
 
 /* ================================================================
@@ -1175,8 +1172,8 @@ body {
         right: 46px;
     }
     .detail-tabs button {
-        font-size: 11px;
-        padding: 8px 4px;
+        font-size: 13px;
+        padding: 10px 4px;
     }
     .modal-content {
         height: 90vh;
@@ -1206,9 +1203,8 @@ body {
         font-size: 12px;
     }
     #detailModal .modal-content {
-        height: 100vh;
-        max-height: 100vh;
-        border-radius: 0;
+        height: 80vh;
+        max-height: 80vh;
     }
     .detail-header .photo-container {
         min-height: 100px;

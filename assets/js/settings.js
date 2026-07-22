@@ -2,6 +2,23 @@
 // ПРОФИЛЬ И НАСТРОЙКИ
 // ================================================================
 
+// Импортируем Capacitor Filesystem (если доступен)
+let CapacitorFilesystem = null;
+try {
+    // Проверяем, запущено ли приложение в Capacitor
+    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+        // Динамический импорт для Capacitor
+        import('@capacitor/filesystem').then(module => {
+            CapacitorFilesystem = module.Filesystem;
+            console.log('✅ Capacitor Filesystem loaded');
+        }).catch(() => {
+            console.log('⚠️ Capacitor Filesystem not available, using fallback');
+        });
+    }
+} catch (e) {
+    console.log('⚠️ Capacitor not available, using fallback');
+}
+
 function saveProfile() {
     const newName = document.getElementById('profileNameInput').value.trim() || 'Вы';
     state.user.name = newName;
@@ -11,7 +28,7 @@ function saveProfile() {
         email: document.getElementById('notifEmail').checked,
     };
     saveState();
-    updateAvatarDisplay(); // ← ВАЖНО: обновляем аватар при сохранении имени
+    updateAvatarDisplay();
 }
 
 function loadProfile() {
@@ -102,7 +119,7 @@ function saveDisplaySettings() {
 }
 
 // ================================================================
-// ЭКСПОРТ/ИМПОРТ КОЛЛЕКЦИЙ
+// ЭКСПОРТ/ИМПОРТ КОЛЛЕКЦИЙ (С ПОДДЕРЖКОЙ ANDROID)
 // ================================================================
 
 function showExportBaseModal() {
@@ -116,19 +133,70 @@ function closeExportBaseModal() {
     document.getElementById('exportBaseModal').classList.remove('show');
 }
 
-function executeExportBase() {
+async function executeExportBase() {
     const baseId = document.getElementById('exportBaseSelect').value;
     const base = getBase(baseId);
     if (!base) return;
     const flowers = getFlowersByBase(baseId);
     const data = { base, flowers, exportedAt: new Date().toISOString() };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `collection_${base.name}_${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const jsonString = JSON.stringify(data, null, 2);
+    const fileName = `collection_${base.name}_${new Date().toISOString().split('T')[0]}.json`;
+
+    try {
+        // Пробуем использовать Capacitor Filesystem (для Android)
+        if (CapacitorFilesystem && window.Capacitor && window.Capacitor.isNativePlatform()) {
+            console.log('📱 Using Capacitor Filesystem for Android export');
+            
+            // Запрашиваем разрешение на запись (Android 13+)
+            const result = await CapacitorFilesystem.requestPermissions();
+            if (result.permissions.storage !== 'granted') {
+                alert('❌ Нет разрешения на запись файлов. Дайте разрешение в настройках.');
+                return;
+            }
+
+            // Сохраняем файл
+            await CapacitorFilesystem.writeFile({
+                path: fileName,
+                data: jsonString,
+                directory: 'DOWNLOAD',
+                encoding: 'utf8'
+            });
+            
+            alert(`✅ Коллекция экспортирована!\n📁 Папка: Загрузки (Downloads)\n📄 Файл: ${fileName}`);
+        } else {
+            // Fallback: браузерное скачивание (для ПК)
+            console.log('💻 Using browser download fallback');
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            alert(`✅ Коллекция экспортирована!\n📁 Папка: Загрузки (Downloads)\n📄 Файл: ${fileName}`);
+        }
+    } catch (error) {
+        console.error('Export error:', error);
+        
+        // Если Capacitor не сработал, пробуем браузерный метод
+        try {
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            alert(`✅ Коллекция экспортирована!\n📁 Папка: Загрузки (Downloads)\n📄 Файл: ${fileName}`);
+        } catch (fallbackError) {
+            alert(`❌ Ошибка при экспорте: ${error.message}`);
+        }
+    }
+    
     closeExportBaseModal();
 }
 
@@ -150,7 +218,6 @@ function importBase(event) {
             state.bases.push(data.base);
             data.flowers.forEach(f => {
                 const newId = 'flower_' + generateUUID();
-                const oldId = f.id;
                 f.id = newId;
                 f.base_id = newBaseId;
                 if (!f.latin_name) f.latin_name = '';
@@ -178,15 +245,36 @@ function importBase(event) {
 // ЭКСПОРТ/ИМПОРТ ВСЕХ ДАННЫХ
 // ================================================================
 
-function exportAllData() {
+async function exportAllData() {
     const data = { bases: state.bases, flowers: state.flowers, user: state.user };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'all_data_' + new Date().toISOString().split('T')[0] + '.json';
-    a.click();
-    URL.revokeObjectURL(url);
+    const jsonString = JSON.stringify(data, null, 2);
+    const fileName = `all_data_${new Date().toISOString().split('T')[0]}.json`;
+
+    try {
+        if (CapacitorFilesystem && window.Capacitor && window.Capacitor.isNativePlatform()) {
+            await CapacitorFilesystem.requestPermissions();
+            await CapacitorFilesystem.writeFile({
+                path: fileName,
+                data: jsonString,
+                directory: 'DOWNLOAD',
+                encoding: 'utf8'
+            });
+            alert(`✅ Все данные экспортированы!\n📁 Папка: Загрузки (Downloads)\n📄 Файл: ${fileName}`);
+        } else {
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            alert(`✅ Все данные экспортированы!\n📁 Папка: Загрузки (Downloads)\n📄 Файл: ${fileName}`);
+        }
+    } catch (error) {
+        alert(`❌ Ошибка при экспорте: ${error.message}`);
+    }
 }
 
 function importAllData(event) {
@@ -241,18 +329,38 @@ function getLogs() {
     } catch (e) { return []; }
 }
 
-function exportLogs() {
+async function exportLogs() {
     const logs = getLogs();
     if (logs.length === 0) {
         alert('Логи пусты');
         return;
     }
-    const data = JSON.stringify(logs, null, 2);
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'phytonote_logs_' + new Date().toISOString().split('T')[0] + '.json';
-    a.click();
-    URL.revokeObjectURL(url);
+    const jsonString = JSON.stringify(logs, null, 2);
+    const fileName = `phytonote_logs_${new Date().toISOString().split('T')[0]}.json`;
+
+    try {
+        if (CapacitorFilesystem && window.Capacitor && window.Capacitor.isNativePlatform()) {
+            await CapacitorFilesystem.requestPermissions();
+            await CapacitorFilesystem.writeFile({
+                path: fileName,
+                data: jsonString,
+                directory: 'DOWNLOAD',
+                encoding: 'utf8'
+            });
+            alert(`✅ Логи экспортированы!\n📁 Папка: Загрузки (Downloads)\n📄 Файл: ${fileName}`);
+        } else {
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            alert(`✅ Логи экспортированы!\n📁 Папка: Загрузки (Downloads)\n📄 Файл: ${fileName}`);
+        }
+    } catch (error) {
+        alert(`❌ Ошибка при экспорте: ${error.message}`);
+    }
 }

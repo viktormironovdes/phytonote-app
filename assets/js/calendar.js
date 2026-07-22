@@ -25,42 +25,41 @@ function renderCalendar() {
         const dateObj = new Date(year, month, d);
         const dateStr = getLocalDateStr(dateObj);
 
-        let hasWateringDone = false;
-        let hasFertilizingDone = false;
-        let hasRepottingDone = false;
-        let hasNote = false;
-        let hasPlannedWatering = false;
-        let hasPlannedFertilizing = false;
-        let hasPlannedRepotting = false;
+        // Проверяем события на этот день
+        let hasDone = false;          // Выполнено (зелёный)
+        let hasPlanned = false;       // Запланировано (оранжевый)
+        let hasNote = false;          // Есть заметка
 
         state.flowers.forEach(f => {
             if (!isBaseEditable(f.base_id)) return;
 
             const historyEvents = (f.history || []).filter(h => h.date === dateStr);
             
-            // Выполненные события
+            // Проверяем выполненные события (полив, подкормка, пересадка)
             historyEvents.forEach(h => {
-                if (h.type === 'watering') hasWateringDone = true;
-                else if (h.type === 'fertilizing') hasFertilizingDone = true;
-                else if (h.type === 'repotting') hasRepottingDone = true;
-                else if (h.type === 'note') hasNote = true;
+                if (h.type === 'watering' || h.type === 'fertilizing' || h.type === 'repotting') {
+                    hasDone = true;
+                }
+                if (h.type === 'note') {
+                    hasNote = true;
+                }
             });
 
-            // Запланированные события (только для будущих дат)
+            // Проверяем запланированные события (только для будущих дат)
             if (dateStr >= todayStr) {
                 // Полив
                 const nextWateringDate = getNextWateringDate(f);
                 if (getLocalDateStr(nextWateringDate) === dateStr) {
-                    const hasDone = (f.history || []).some(h => h.date === dateStr && h.type === 'watering');
-                    if (!hasDone) hasPlannedWatering = true;
+                    const hasDoneToday = (f.history || []).some(h => h.date === dateStr && h.type === 'watering');
+                    if (!hasDoneToday) hasPlanned = true;
                 }
                 
                 // Подкормка
                 if (f.fertilizing > 0 && isFertilizingActive(f)) {
                     const nextFertDate = getNextFertilizingDate(f);
                     if (nextFertDate && getLocalDateStr(nextFertDate) === dateStr) {
-                        const hasDone = (f.history || []).some(h => h.date === dateStr && h.type === 'fertilizing');
-                        if (!hasDone) hasPlannedFertilizing = true;
+                        const hasDoneToday = (f.history || []).some(h => h.date === dateStr && h.type === 'fertilizing');
+                        if (!hasDoneToday) hasPlanned = true;
                     }
                 }
                 
@@ -68,21 +67,23 @@ function renderCalendar() {
                 if (f.repot_interval > 0) {
                     const nextRepotDate = getNextRepottingDate(f);
                     if (nextRepotDate && getLocalDateStr(nextRepotDate) === dateStr) {
-                        const hasDone = (f.history || []).some(h => h.date === dateStr && h.type === 'repotting');
-                        if (!hasDone) hasPlannedRepotting = true;
+                        const hasDoneToday = (f.history || []).some(h => h.date === dateStr && h.type === 'repotting');
+                        if (!hasDoneToday) hasPlanned = true;
                     }
                 }
             }
         });
 
-        let dots = '';
-        if (hasWateringDone) dots += `<span class="dot green"></span>`;
-        if (hasFertilizingDone) dots += `<span class="dot purple"></span>`;
-        if (hasRepottingDone) dots += `<span class="dot orange-done"></span>`;
-        if (hasNote) dots += `<span class="dot blue"></span>`;
-        if (hasPlannedWatering) dots += `<span class="dot orange"></span>`;
-        if (hasPlannedFertilizing) dots += `<span class="dot orange-light"></span>`;
-        if (hasPlannedRepotting) dots += `<span class="dot orange-dark"></span>`;
+        // Определяем цвет точки
+        let dotColor = '';
+        if (hasDone) {
+            dotColor = 'green';  // ✅ Выполнено
+        } else if (hasPlanned) {
+            dotColor = 'orange'; // 🟠 Запланировано
+        }
+
+        // Символ заметки в правом верхнем углу
+        const noteIcon = hasNote ? '💬' : '';
 
         const isToday = dateStr === todayStr;
         const isSelected = dateStr === state.selectedCalendarDate;
@@ -91,8 +92,10 @@ function renderCalendar() {
         if (isToday) dayClass += ' active';
         if (isSelected) dayClass += ' selected';
 
-        html += `<div class="${dayClass}" onclick="selectCalendarDay('${dateStr}')">
-            ${d}<div class="dots">${dots}</div>
+        html += `<div class="${dayClass}" onclick="selectCalendarDay('${dateStr}')" style="position:relative;">
+            ${d}
+            ${noteIcon ? `<span style="position:absolute;top:2px;right:4px;font-size:10px;">${noteIcon}</span>` : ''}
+            ${dotColor ? `<div class="dots"><span class="dot ${dotColor}"></span></div>` : ''}
         </div>`;
     }
 
@@ -161,6 +164,7 @@ function showDayEvents(dateStr) {
         }
     });
 
+    // Сначала выполненные, потом запланированные
     events.sort((a, b) => {
         if (a.planned === b.planned) return 0;
         return a.planned ? 1 : -1;
@@ -179,20 +183,22 @@ function showDayEvents(dateStr) {
         watering: '💧 Полив', 
         fertilizing: '🧪 Подкормка', 
         repotting: '🔄 Пересадка',
-        note: '📝 Примечание'
+        note: '💬 Заметка'
     };
     
     container.innerHTML = events.map(e => {
         const status = e.planned ? '🟠 Запланировано' : '🟢 Выполнено';
         const displayName = e.flower.catalog_name || e.flower.name;
         const textDisplay = e.text ? `: ${e.text}` : '';
+        const isNote = e.type === 'note';
+        
         return `
-            <div class="event-plank" onclick="${e.type === 'note' ? '' : `showDetail('${e.flower.id}')`}" style="${e.type === 'note' ? 'border-left-color: #4a90d9;' : ''}">
+            <div class="event-plank" onclick="${isNote ? '' : `showDetail('${e.flower.id}')`}" style="${isNote ? 'border-left-color: #4a90d9; cursor: default;' : 'cursor: pointer;'}">
                 <div>
-                    <div class="name">${displayName}</div>
-                    <div class="sub">${e.flower.placement || ''} · ${typeMap[e.type] || e.type}${textDisplay}</div>
+                    <div class="name">${displayName} ${isNote ? '💬' : ''}</div>
+                    <div class="sub">${e.flower.placement || '—'} · ${typeMap[e.type] || e.type}${textDisplay}</div>
                 </div>
-                <span class="badge" style="${e.type === 'note' ? 'background:#dce8f5;color:#2d5a7a;' : ''}">${status}</span>
+                <span class="badge" style="${isNote ? 'background:#dce8f5;color:#2d5a7a;' : ''}">${isNote ? '📝 Заметка' : status}</span>
             </div>
         `;
     }).join('');

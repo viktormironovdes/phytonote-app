@@ -20,15 +20,35 @@ try {
 }
 
 function saveProfile() {
-    const newName = document.getElementById('profileNameInput').value.trim() || 'Вы';
+    const nameInput = document.getElementById('profileNameInput');
+    const emailInput = document.getElementById('profileEmailInput');
+    
+    if (!nameInput || !emailInput) {
+        console.error('❌ Profile inputs not found');
+        return;
+    }
+    
+    const newName = nameInput.value.trim() || 'Вы';
+    const newEmail = emailInput.value.trim();
+    
+    // Сохраняем в state
     state.user.name = newName;
-    state.user.email = document.getElementById('profileEmailInput').value.trim();
+    state.user.email = newEmail;
+    
+    // Сохраняем уведомления
     state.user.notifications = {
-        push: document.getElementById('notifPush').checked,
-        email: document.getElementById('notifEmail').checked,
+        push: document.getElementById('notifPush')?.checked ?? true,
+        email: document.getElementById('notifEmail')?.checked ?? false,
     };
+    
+    // Сохраняем в localStorage
     saveState();
+    
+    // Обновляем аватар (букву)
     updateAvatarDisplay();
+    
+    // Показываем уведомление
+    alert('✅ Профиль сохранён!');
 }
 
 function loadProfile() {
@@ -114,7 +134,7 @@ function saveDisplaySettings() {
     };
     saveState();
     if (state.detailFlowerId) {
-        renderDetail();
+        renderDetailPage(state.detailFlowerId);
     }
 }
 

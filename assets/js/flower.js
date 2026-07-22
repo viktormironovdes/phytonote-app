@@ -245,13 +245,13 @@ function renderDetail() {
         `с ${['Января','Февраля','Марта','Апреля','Мая','Июня','Июля','Августа','Сентября','Октября','Ноября','Декабря'][f.fertilizing_start-1]} по ${['Января','Февраля','Марта','Апреля','Мая','Июня','Июля','Августа','Сентября','Октября','Ноября','Декабря'][f.fertilizing_end-1]}` :
         'Не указан';
 
-    // ФОТО
+    // ФОТО - показываем только в режиме редактирования
     const photoHtml = `
         <div class="detail-header">
-            <div class="photo-container" onclick="${isEditable ? `document.getElementById('flowerPhotoInput').click()` : ''}">
+            <div class="photo-container" onclick="${editMode ? `document.getElementById('flowerPhotoInput').click()` : ''}">
                 ${f.photo ? `<img src="${f.photo}" alt="${displayName}">` : `<div class="no-photo">${displayIcon}</div>`}
-                <div class="photo-hint">${isEditable ? 'Нажмите, чтобы заменить фото' : ''}</div>
-                ${isEditable ? `<input type="file" id="flowerPhotoInput" accept="image/*" style="display:none" onchange="handleFlowerPhotoUpload('${f.id}')">` : ''}
+                <div class="photo-hint">${editMode ? 'Нажмите, чтобы заменить фото' : ''}</div>
+                ${editMode ? `<input type="file" id="flowerPhotoInput" accept="image/*" style="display:none" onchange="handleFlowerPhotoUpload('${f.id}')">` : ''}
             </div>
             ${isEditable ? `
                 <button class="edit-btn-overlay" onclick="${editMode ? 'saveDetailEdit()' : 'toggleDetailEdit()'}" title="${editMode ? 'Сохранить' : 'Редактировать'}">
@@ -519,7 +519,6 @@ function renderDetail() {
     // ============================================================
     const filter = state.historyFilter || 'all';
     
-    // Фильтруем историю
     let filteredHistory = history;
     if (filter !== 'all') {
         filteredHistory = history.filter(h => h.type === filter);
@@ -531,7 +530,7 @@ function renderDetail() {
         watering: '💧 Полив', 
         fertilizing: '🧪 Подкормка', 
         repotting: '🔄 Пересадка',
-        note: '📝 Примечание'
+        note: '📝 Заметка'  // ← ИЗМЕНЕНО: "Примечание" → "Заметка"
     };
     
     const historyHtml = historyEvents.map(h => {
@@ -541,7 +540,7 @@ function renderDetail() {
             <div class="history-item">
                 <span style="min-width:100px;">${h.date}</span>
                 <span style="flex:1;">${typeDisplay}${textDisplay}</span>
-                ${isEditable ? `
+                ${isEditable && editMode ? `  <!-- ← ИЗМЕНЕНО: показываем кнопки только в режиме редактирования -->
                     <div style="display:flex;gap:4px;flex-shrink:0;">
                         <button class="btn btn-sm btn-outline" onclick="editHistoryEvent('${f.id}', '${h.id}')" style="padding:2px 8px;font-size:11px;">✏️</button>
                         <button class="btn btn-sm btn-outline" onclick="removeHistoryEvent('${f.id}', '${h.id}')" style="padding:2px 8px;font-size:11px;color:#d9534f;border-color:#f0d0d0;">🗑</button>
@@ -558,7 +557,7 @@ function renderDetail() {
             <button class="btn btn-sm ${filter === 'watering' ? 'btn-success' : 'btn-outline'}" onclick="setHistoryFilter('watering')" style="padding:4px 12px;font-size:12px;width:auto;">💧 Полив</button>
             <button class="btn btn-sm ${filter === 'fertilizing' ? 'btn-success' : 'btn-outline'}" onclick="setHistoryFilter('fertilizing')" style="padding:4px 12px;font-size:12px;width:auto;">🧪 Подкормка</button>
             <button class="btn btn-sm ${filter === 'repotting' ? 'btn-success' : 'btn-outline'}" onclick="setHistoryFilter('repotting')" style="padding:4px 12px;font-size:12px;width:auto;">🔄 Пересадка</button>
-            <button class="btn btn-sm ${filter === 'note' ? 'btn-success' : 'btn-outline'}" onclick="setHistoryFilter('note')" style="padding:4px 12px;font-size:12px;width:auto;">📝 Примечание</button>
+            <button class="btn btn-sm ${filter === 'note' ? 'btn-success' : 'btn-outline'}" onclick="setHistoryFilter('note')" style="padding:4px 12px;font-size:12px;width:auto;">📝 Заметка</button>  <!-- ← ИЗМЕНЕНО -->
         </div>
     `;
 
@@ -566,11 +565,11 @@ function renderDetail() {
         <div style="padding:0 20px 12px 20px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-top:4px;">
                 <div style="font-weight:600;font-size:14px;">📜 История ухода</div>
-                ${isEditable ? `
+                ${isEditable && editMode ? `  <!-- ← ИЗМЕНЕНО: показываем кнопку только в режиме редактирования -->
                     <button class="btn btn-sm btn-success" onclick="showAddHistoryEventModal('${f.id}')" style="padding:4px 12px;font-size:12px;width:auto;">➕ Добавить</button>
                 ` : ''}
             </div>
-            ${isEditable ? filterButtons : ''}
+            ${isEditable && editMode ? filterButtons : ''}  <!-- ← ИЗМЕНЕНО: фильтры только в режиме редактирования -->
             <div style="background:#f8fbf8;border-radius:12px;padding:8px 12px;">
                 ${historyHtml}
                 ${historyEvents.length >= 30 ? `<div style="text-align:center;font-size:12px;color:#8aa08a;padding:4px 0;">Показаны последние 30 записей</div>` : ''}
@@ -662,13 +661,13 @@ function showAddHistoryEventModal(flowerId) {
                     <option value="watering">💧 Полив</option>
                     <option value="fertilizing">🧪 Подкормка</option>
                     <option value="repotting">🔄 Пересадка</option>
-                    <option value="note">📝 Примечание</option>
+                    <option value="note">📝 Заметка</option>  <!-- ← ИЗМЕНЕНО -->
                 </select>
                 <label style="margin-top:10px;">Дата</label>
                 <input id="newHistoryDate" type="date" value="${today}" style="width:calc(100% - 40px);margin:0 20px;padding:10px;border-radius:12px;border:1px solid #dce4dc;font-size:14px;" max="${today}">
                 <div id="noteFieldContainer" style="display:none;">
-                    <label style="margin-top:10px;">Текст примечания (макс. 100 символов)</label>
-                    <textarea id="newHistoryNote" maxlength="100" placeholder="Ваше примечание..." style="width:calc(100% - 40px);margin:0 20px;padding:10px;border-radius:12px;border:1px solid #dce4dc;font-size:14px;resize:vertical;min-height:60px;font-family:inherit;"></textarea>
+                    <label style="margin-top:10px;">Текст заметки (макс. 100 символов)</label>  <!-- ← ИЗМЕНЕНО -->
+                    <textarea id="newHistoryNote" maxlength="100" placeholder="Ваша заметка..." style="width:calc(100% - 40px);margin:0 20px;padding:10px;border-radius:12px;border:1px solid #dce4dc;font-size:14px;resize:vertical;min-height:60px;font-family:inherit;"></textarea>
                     <div style="font-size:12px;color:#8aa08a;padding:0 20px;margin-top:2px;text-align:right;"><span id="noteCharCount">0</span>/100</div>
                 </div>
             </div>
@@ -681,7 +680,6 @@ function showAddHistoryEventModal(flowerId) {
     document.body.appendChild(overlay);
     overlay.addEventListener('click', function(e) { if (e.target === this) closeHistoryModal(); });
     
-    // Привязываем события
     setTimeout(() => {
         const typeSelect = document.getElementById('newHistoryType');
         if (typeSelect) {
@@ -743,23 +741,20 @@ function addHistoryEventFromModal(flowerId) {
     const today = getLocalDateStr(new Date());
     const isNote = type === 'note';
     
-    // Валидация: полив/подкормка/пересадка только сегодня или прошлое
     if (!isNote && date > today) {
         alert('⚠️ Полив, подкормку и пересадку нельзя добавлять в будущее');
         return;
     }
     
-    // Примечание: ограничение 100 символов
     if (isNote && noteText.length === 0) {
-        alert('Введите текст примечания');
+        alert('Введите текст заметки');  // ← ИЗМЕНЕНО
         return;
     }
     if (isNote && noteText.length > 100) {
-        alert('Примечание не должно превышать 100 символов');
+        alert('Заметка не должна превышать 100 символов');  // ← ИЗМЕНЕНО
         return;
     }
     
-    // Проверяем дубликат (для полива/подкормки/пересадки)
     if (!isNote) {
         const exists = (f.history || []).some(h => h.date === date && h.type === type);
         if (exists) {
@@ -777,7 +772,7 @@ function addHistoryEventFromModal(flowerId) {
         renderAll();
         renderCare();
         renderCalendar();
-        const typeName = type === 'watering' ? 'Полив' : type === 'fertilizing' ? 'Подкормка' : type === 'repotting' ? 'Пересадка' : 'Примечание';
+        const typeName = type === 'watering' ? 'Полив' : type === 'fertilizing' ? 'Подкормка' : type === 'repotting' ? 'Пересадка' : 'Заметка';  // ← ИЗМЕНЕНО
         alert(`✅ ${typeName} добавлен в историю!`);
     }
 }
@@ -806,13 +801,13 @@ function editHistoryEvent(flowerId, eventId) {
                     <option value="watering" ${event.type === 'watering' ? 'selected' : ''}>💧 Полив</option>
                     <option value="fertilizing" ${event.type === 'fertilizing' ? 'selected' : ''}>🧪 Подкормка</option>
                     <option value="repotting" ${event.type === 'repotting' ? 'selected' : ''}>🔄 Пересадка</option>
-                    <option value="note" ${event.type === 'note' ? 'selected' : ''}>📝 Примечание</option>
+                    <option value="note" ${event.type === 'note' ? 'selected' : ''}>📝 Заметка</option>  <!-- ← ИЗМЕНЕНО -->
                 </select>
                 <label style="margin-top:10px;">Дата</label>
                 <input id="editHistoryDate" type="date" value="${event.date}" style="width:calc(100% - 40px);margin:0 20px;padding:10px;border-radius:12px;border:1px solid #dce4dc;font-size:14px;" ${isNote ? '' : `max="${today}"`}>
                 <div id="editNoteFieldContainer" style="${isNote ? 'display:block;' : 'display:none;'}">
-                    <label style="margin-top:10px;">Текст примечания (макс. 100 символов)</label>
-                    <textarea id="editHistoryNote" maxlength="100" placeholder="Ваше примечание..." style="width:calc(100% - 40px);margin:0 20px;padding:10px;border-radius:12px;border:1px solid #dce4dc;font-size:14px;resize:vertical;min-height:60px;font-family:inherit;">${event.text || ''}</textarea>
+                    <label style="margin-top:10px;">Текст заметки (макс. 100 символов)</label>  <!-- ← ИЗМЕНЕНО -->
+                    <textarea id="editHistoryNote" maxlength="100" placeholder="Ваша заметка..." style="width:calc(100% - 40px);margin:0 20px;padding:10px;border-radius:12px;border:1px solid #dce4dc;font-size:14px;resize:vertical;min-height:60px;font-family:inherit;">${event.text || ''}</textarea>
                     <div style="font-size:12px;color:#8aa08a;padding:0 20px;margin-top:2px;text-align:right;"><span id="editNoteCharCount">${(event.text || '').length}</span>/100</div>
                 </div>
             </div>
@@ -885,20 +880,18 @@ function saveHistoryEventEdit(flowerId, eventId) {
     const today = getLocalDateStr(new Date());
     const isNote = type === 'note';
     
-    // Валидация
     if (!isNote && date > today) {
         alert('⚠️ Полив, подкормку и пересадку нельзя добавлять в будущее');
         return;
     }
     
     if (isNote && noteText.length > 100) {
-        alert('Примечание не должно превышать 100 символов');
+        alert('Заметка не должна превышать 100 символов');  // ← ИЗМЕНЕНО
         return;
     }
     
     const event = f.history.find(h => h.id === eventId);
     if (event) {
-        // Проверяем конфликт для полива/подкормки/пересадки
         if (!isNote) {
             const conflict = (f.history || []).some(h => 
                 h.id !== eventId && h.date === date && h.type === type

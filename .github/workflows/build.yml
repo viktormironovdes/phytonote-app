@@ -31,6 +31,9 @@ jobs:
           "scripts": {
             "build": "echo \"Building PhytoNote...\""
           },
+          "dependencies": {
+            "@capacitor/filesystem": "^6.0.0"
+          },
           "devDependencies": {
             "@capacitor/cli": "^6.0.0",
             "@capacitor/android": "^6.0.0"
@@ -40,22 +43,7 @@ jobs:
     - name: Install dependencies
       run: npm install
 
-    - name: Create capacitor.config.json with icon
-      run: |
-        cat > capacitor.config.json << 'EOF'
-        {
-          "appId": "com.phytonote.app",
-          "appName": "PhytoNote",
-          "webDir": "www",
-          "bundledWebRuntime": false,
-          "android": {
-            "icon": "assets/phytonote/icons/icon-192.png"
-          }
-        }
-        EOF
-        echo "✅ capacitor.config.json created"
-
-    - name: Copy web assets
+    - name: Copy web assets BEFORE Capacitor init
       run: |
         mkdir -p www
         cp -r assets/* www/
@@ -66,8 +54,9 @@ jobs:
         npx cap init "PhytoNote" "com.phytonote.app" --web-dir www
         npx cap add android
         npx cap update
+        npx cap sync
 
-    - name: Setup app icons (copy to Android res)
+    - name: Setup app icons
       run: |
         echo "🎨 Setting up app icons..."
         
@@ -82,14 +71,12 @@ jobs:
         if [ -d "$ICON_PATH" ]; then
           echo "📂 Found icons in: $ICON_PATH"
           
-          # Копируем иконки
           [ -f "$ICON_PATH/icon-48.png" ] && cp "$ICON_PATH/icon-48.png" android/app/src/main/res/mipmap-mdpi/ic_launcher.png
           [ -f "$ICON_PATH/icon-72.png" ] && cp "$ICON_PATH/icon-72.png" android/app/src/main/res/mipmap-hdpi/ic_launcher.png
           [ -f "$ICON_PATH/icon-96.png" ] && cp "$ICON_PATH/icon-96.png" android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
           [ -f "$ICON_PATH/icon-144.png" ] && cp "$ICON_PATH/icon-144.png" android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
           [ -f "$ICON_PATH/icon-192.png" ] && cp "$ICON_PATH/icon-192.png" android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
           
-          # round иконки
           [ -f "$ICON_PATH/icon-48.png" ] && cp "$ICON_PATH/icon-48.png" android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
           [ -f "$ICON_PATH/icon-72.png" ] && cp "$ICON_PATH/icon-72.png" android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
           [ -f "$ICON_PATH/icon-96.png" ] && cp "$ICON_PATH/icon-96.png" android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
@@ -97,8 +84,6 @@ jobs:
           [ -f "$ICON_PATH/icon-192.png" ] && cp "$ICON_PATH/icon-192.png" android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
           
           echo "✅ Icons installed!"
-        else
-          echo "⚠️ Icon folder not found at $ICON_PATH"
         fi
 
     - name: Build debug APK

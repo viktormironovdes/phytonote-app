@@ -90,6 +90,12 @@ jobs:
           echo "✅ AndroidManifest updated"
         fi
 
+    - name: Build debug APK (unsigned)
+      run: |
+        cd android
+        chmod +x ./gradlew
+        ./gradlew assembleDebug
+
     - name: Create keystore
       run: |
         keytool -genkey -v \
@@ -102,30 +108,30 @@ jobs:
           -keypass phytonote123 \
           -dname "CN=PhytoNote, OU=App, O=PhytoNote, L=City, S=State, C=US"
 
-    - name: Add signing config to existing build.gradle
+    - name: Install apksigner
       run: |
-        GRADLE_PATH="android/app/build.gradle"
-        
-        # Проверяем, есть ли уже signingConfigs
-        if grep -q "signingConfigs" "$GRADLE_PATH"; then
-          echo "✅ signingConfigs already exists"
-        else
-          echo "📝 Adding signingConfigs to build.gradle"
-          
-          # Добавляем signingConfigs после android {
-          sed -i '/android {/a \    signingConfigs {\n        release {\n            storeFile file("../../../phytonote.keystore")\n            storePassword "phytonote123"\n            keyAlias "phytonote"\n            keyPassword "phytonote123"\n        }\n    }' "$GRADLE_PATH"
-          
-          # Добавляем signingConfig в release
-          sed -i '/release {/a \            signingConfig signingConfigs.release' "$GRADLE_PATH"
-          
-          echo "✅ signingConfigs added"
-        fi
+        sudo apt-get update
+        sudo apt-get install -y apksigner
 
-    - name: Build Android APK
+    - name: Sign the APK
       run: |
-        cd android
-        chmod +x ./gradlew
-        ./gradlew assembleRelease
+        # Подписываем APK
+        apksigner sign \
+          --ks phytonote.keystore \
+          --ks-pass pass:phytonote123 \
+          --key-pass pass:phytonote123 \
+          android/app/build/outputs/apk/debug/app-debug.apk
+        
+        # Копируем подписанный APK как release
+        mkdir -p android/app/build/outputs/apk/release/
+        cp android/app/build/outputs/apk/debug/app-debug.apk android/app/build/outputs/apk/release/app-release.apk
+        
+        echo "✅ APK signed successfully!"
+
+    - name: Verify APK signature
+      run: |
+        apksigner verify android/app/build/outputs/apk/release/app-release.apk
+        echo "✅ APK signature verified!"
 
     - name: Upload APK
       uses: actions/upload-artifact@v4

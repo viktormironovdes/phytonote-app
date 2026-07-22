@@ -8,7 +8,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Навигация
     document.querySelectorAll('.bottom-nav .tab').forEach(tab => {
-        tab.addEventListener('click', () => navigateTo(tab.dataset.page));
+        tab.addEventListener('click', () => {
+            // Если мы на странице карточки, закрываем её
+            if (state.currentPage === 'detail') {
+                closeDetailPage();
+            }
+            navigateTo(tab.dataset.page);
+        });
     });
 
     // Фильтры в разделе "Уход"
@@ -50,4 +56,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Открываем раздел "Уход"
     navigateTo('care');
+
+    // Обработка системной кнопки "Назад" (Android)
+    window.addEventListener('popstate', function(event) {
+        if (state.currentPage === 'detail') {
+            closeDetailPage();
+        }
+    });
 });

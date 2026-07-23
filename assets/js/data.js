@@ -66,6 +66,12 @@ function loadState() {
                     show_care_info: false,
                 }
             };
+            
+            // Убеждаемся, что имя всегда есть
+            if (!state.user.name || state.user.name.trim() === '') {
+                state.user.name = 'Вы';
+            }
+            
             if (!state.user.display_settings) {
                 state.user.display_settings = {
                     show_placement: true,
@@ -134,7 +140,10 @@ function loadState() {
         } else {
             initDemoData();
         }
-    } catch (e) { initDemoData(); }
+    } catch (e) { 
+        console.error('❌ Ошибка загрузки состояния:', e);
+        initDemoData(); 
+    }
     saveState();
 }
 

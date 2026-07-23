@@ -76,7 +76,7 @@ function renderDetailPage(flowerId) {
     let mainContent = `
         <div class="detail-field">
             <span class="label">🌿 Название</span>
-            <span class="value" style="font-weight:700;font-size:18px;">${displayName}</span>
+            <span class="value value-name">${displayName}</span>
         </div>
     `;
 
@@ -328,7 +328,7 @@ function renderDetailPage(flowerId) {
     }
 
     // ============================================================
-    // ВКЛАДКА "ИСТОРИЯ УХОДА" (фильтры видны всегда)
+    // ВКЛАДКА "ИСТОРИЯ УХОДА" (фильтры видны всегда, кнопка Добавить всегда доступна)
     // ============================================================
     const filter = state.historyFilter || 'all';
     
@@ -374,12 +374,13 @@ function renderDetailPage(flowerId) {
         </div>
     `;
 
+    // КНОПКА ДОБАВИТЬ - ДОСТУПНА ВСЕГДА (если растение редактируемое)
     const historyContent = `
         <div style="padding:0 20px 12px 20px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-top:4px;">
                 <div style="font-weight:600;font-size:14px;">📜 История ухода</div>
-                ${isEditable && editMode ? `
-                    <button class="btn btn-sm btn-success" onclick="showAddHistoryEventModal('${f.id}')" style="padding:4px 12px;font-size:12px;width:auto;">➕ Добавить</button>
+                ${isEditable ? `
+                    <button class="btn btn-sm btn-success" onclick="showAddHistoryEventModal('${f.id}')" style="padding:4px 12px;font-size:12px;width:auto;cursor:pointer;">➕ Добавить</button>
                 ` : ''}
             </div>
             ${filterButtons}
@@ -391,15 +392,15 @@ function renderDetailPage(flowerId) {
     `;
 
     // ============================================================
-    // КНОПКИ ВТОРОСТЕПЕННЫХ ДЕЙСТВИЙ (Клонировать/Переместить/Удалить)
+    // КНОПКИ ВТОРОСТЕПЕННЫХ ДЕЙСТВИЙ (только в Основном)
     // ============================================================
     const secondaryActionsHtml = `
         <div style="padding: 8px 20px 12px 20px; border-top: 1px solid #eef3ee; margin-top: 4px;">
             ${isEditable ? `
                 <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
-                    <button class="btn btn-sm btn-outline" onclick="showCloneModal()" style="font-size:12px;padding:4px 14px;border-radius:20px;color:#5c725c;border:1px solid #dce4dc;background:transparent;">📋 Клонировать</button>
-                    <button class="btn btn-sm btn-outline" onclick="showMoveModal()" style="font-size:12px;padding:4px 14px;border-radius:20px;color:#5c725c;border:1px solid #dce4dc;background:transparent;">📦 Переместить</button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteFlower()" style="font-size:12px;padding:4px 14px;border-radius:20px;color:#d9534f;border-color:#f0d0d0;background:transparent;">🗑 Удалить</button>
+                    <button class="btn btn-sm btn-outline" onclick="showCloneModal()" style="font-size:12px;padding:4px 14px;border-radius:20px;color:#5c725c;border:1px solid #dce4dc;background:transparent;cursor:pointer;">📋 Клонировать</button>
+                    <button class="btn btn-sm btn-outline" onclick="showMoveModal()" style="font-size:12px;padding:4px 14px;border-radius:20px;color:#5c725c;border:1px solid #dce4dc;background:transparent;cursor:pointer;">📦 Переместить</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteFlower()" style="font-size:12px;padding:4px 14px;border-radius:20px;color:#d9534f;border-color:#f0d0d0;background:transparent;cursor:pointer;">🗑 Удалить</button>
                 </div>
             ` : `
                 <span class="readonly-badge" style="margin:auto;display:block;text-align:center;padding:8px;">🔒 Только просмотр</span>
@@ -424,11 +425,9 @@ function renderDetailPage(flowerId) {
                 </div>
                 <div class="detail-tab-content ${state.detailTab === 'info' ? 'active' : ''}" style="padding:0 20px;">
                     ${infoContent}
-                    ${secondaryActionsHtml}
                 </div>
                 <div class="detail-tab-content ${state.detailTab === 'history' ? 'active' : ''}" style="padding:0 20px;">
                     ${historyContent}
-                    ${secondaryActionsHtml}
                 </div>
             </div>
         </div>
@@ -699,4 +698,184 @@ function showFactDetail(plantId, characteristicId) {
     `;
     document.body.appendChild(overlay);
     overlay.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('show'); });
+}
+
+// ================================================================
+// МОДАЛЬНОЕ ОКНО ДЛЯ ДОБАВЛЕНИЯ СОБЫТИЯ В ИСТОРИЮ
+// ================================================================
+
+function showAddHistoryEventModal(flowerId) {
+    console.log('🔵 showAddHistoryEventModal вызвана для:', flowerId);
+    
+    const f = getFlower(flowerId);
+    if (!f) {
+        console.error('❌ Растение не найдено:', flowerId);
+        alert('Ошибка: растение не найдено');
+        return;
+    }
+    
+    const today = getLocalDateStr(new Date());
+    
+    // Удаляем старую модалку, если есть
+    const oldModal = document.getElementById('historyEventModal');
+    if (oldModal) {
+        oldModal.remove();
+    }
+    
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay show';
+    overlay.id = 'historyEventModal';
+    overlay.innerHTML = `
+        <div class="modal-content">
+            <h2>➕ Добавить событие</h2>
+            <div class="modal-scroll">
+                <label>Тип события</label>
+                <select id="newHistoryType" style="width:calc(100% - 40px);margin:0 20px;padding:10px;border-radius:12px;border:1px solid #dce4dc;font-size:14px;">
+                    <option value="watering">💧 Полив</option>
+                    <option value="fertilizing">🧪 Подкормка</option>
+                    <option value="repotting">🔄 Пересадка</option>
+                    <option value="note">📝 Заметка</option>
+                </select>
+                <label style="margin-top:10px;">Дата</label>
+                <input id="newHistoryDate" type="date" value="${today}" style="width:calc(100% - 40px);margin:0 20px;padding:10px;border-radius:12px;border:1px solid #dce4dc;font-size:14px;" max="${today}">
+                <div id="noteFieldContainer" style="display:none;">
+                    <label style="margin-top:10px;">Текст заметки (макс. 100 символов)</label>
+                    <textarea id="newHistoryNote" maxlength="100" placeholder="Ваша заметка..." style="width:calc(100% - 40px);margin:0 20px;padding:10px;border-radius:12px;border:1px solid #dce4dc;font-size:14px;resize:vertical;min-height:60px;font-family:inherit;"></textarea>
+                    <div style="font-size:12px;color:#8aa08a;padding:0 20px;margin-top:2px;text-align:right;"><span id="noteCharCount">0</span>/100</div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeHistoryModal()">Отмена</button>
+                <button class="btn-save" onclick="addHistoryEventFromModal('${flowerId}')">Добавить</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    
+    // Добавляем обработчик закрытия по клику на фон
+    overlay.addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeHistoryModal();
+        }
+    });
+    
+    // Настраиваем переключение поля заметки
+    setTimeout(() => {
+        const typeSelect = document.getElementById('newHistoryType');
+        if (typeSelect) {
+            typeSelect.addEventListener('change', function() {
+                const isNote = this.value === 'note';
+                const noteContainer = document.getElementById('noteFieldContainer');
+                const dateInput = document.getElementById('newHistoryDate');
+                
+                if (noteContainer) {
+                    noteContainer.style.display = isNote ? 'block' : 'none';
+                }
+                if (dateInput) {
+                    if (isNote) {
+                        dateInput.removeAttribute('max');
+                    } else {
+                        dateInput.setAttribute('max', getLocalDateStr(new Date()));
+                    }
+                }
+            });
+        }
+        
+        const noteTextarea = document.getElementById('newHistoryNote');
+        if (noteTextarea) {
+            noteTextarea.addEventListener('input', function() {
+                const count = document.getElementById('noteCharCount');
+                if (count) {
+                    count.textContent = this.value.length;
+                }
+            });
+        }
+    }, 100);
+    
+    console.log('✅ Модальное окно добавлено в DOM');
+}
+
+function closeHistoryModal() {
+    const modal = document.getElementById('historyEventModal');
+    if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => {
+            if (modal.parentNode) {
+                modal.remove();
+            }
+        }, 300);
+    }
+}
+
+function addHistoryEventFromModal(flowerId) {
+    console.log('🔵 addHistoryEventFromModal вызвана для:', flowerId);
+    
+    const f = getFlower(flowerId);
+    if (!f) {
+        console.error('❌ Растение не найдено:', flowerId);
+        alert('Ошибка: растение не найдено');
+        return;
+    }
+    
+    const typeSelect = document.getElementById('newHistoryType');
+    const dateInput = document.getElementById('newHistoryDate');
+    const noteTextarea = document.getElementById('newHistoryNote');
+    
+    if (!typeSelect || !dateInput) {
+        console.error('❌ Элементы формы не найдены');
+        alert('Ошибка: форма не загружена');
+        return;
+    }
+    
+    const type = typeSelect.value;
+    const date = dateInput.value;
+    const noteText = noteTextarea?.value?.trim() || '';
+    
+    if (!date) {
+        alert('Выберите дату');
+        return;
+    }
+    
+    const today = getLocalDateStr(new Date());
+    const isNote = type === 'note';
+    
+    // Валидация: полив/подкормка/пересадка только сегодня или прошлое
+    if (!isNote && date > today) {
+        alert('⚠️ Полив, подкормку и пересадку нельзя добавлять в будущее');
+        return;
+    }
+    
+    // Примечание: ограничение 100 символов
+    if (isNote && noteText.length === 0) {
+        alert('Введите текст заметки');
+        return;
+    }
+    if (isNote && noteText.length > 100) {
+        alert('Заметка не должна превышать 100 символов');
+        return;
+    }
+    
+    // Проверяем дубликат (для полива/подкормки/пересадки)
+    if (!isNote) {
+        const exists = (f.history || []).some(h => h.date === date && h.type === type);
+        if (exists) {
+            const typeName = type === 'watering' ? 'Полив' : type === 'fertilizing' ? 'Подкормка' : 'Пересадка';
+            alert(`⚠️ ${typeName} уже отмечен ${date}`);
+            return;
+        }
+    }
+    
+    const success = addHistoryEvent(f, type, date, noteText);
+    if (success) {
+        saveState();
+        closeHistoryModal();
+        renderDetailPage(flowerId);
+        renderAll();
+        renderCare();
+        renderCalendar();
+        const typeName = type === 'watering' ? 'Полив' : type === 'fertilizing' ? 'Подкормка' : type === 'repotting' ? 'Пересадка' : 'Заметка';
+        alert(`✅ ${typeName} добавлен в историю!`);
+    } else {
+        alert('❌ Ошибка при добавлении события');
+    }
 }

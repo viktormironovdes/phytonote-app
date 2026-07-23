@@ -61,6 +61,10 @@ function navigateTo(page, params) {
     else if (page === 'profile') {
         loadProfile();
         updateCounts();
+        // ВАЖНО: при переходе в профиль обновляем аватар
+        setTimeout(function() {
+            updateAvatarDisplay();
+        }, 50);
     }
 }
 

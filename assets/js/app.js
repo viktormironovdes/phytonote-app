@@ -3,8 +3,12 @@
 // ================================================================
 
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 PhytoNote инициализация...');
+    
     // Загружаем состояние (с миграцией)
     loadState();
+    console.log('📊 Состояние загружено:', state);
+    console.log('👤 Пользователь:', state.user);
 
     // Навигация
     document.querySelectorAll('.bottom-nav .tab').forEach(tab => {
@@ -52,7 +56,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // Загрузка каталога и отрисовка
     loadCatalog();
     renderAll();
+    
+    // Загружаем профиль и ОБЯЗАТЕЛЬНО обновляем аватар
     loadProfile();
+    
+    // ДОПОЛНИТЕЛЬНО: принудительно обновляем аватар через 100мс (на случай, если DOM ещё не готов)
+    setTimeout(function() {
+        console.log('🔄 Принудительное обновление аватарки через 100мс');
+        updateAvatarDisplay();
+    }, 100);
 
     // Открываем раздел "Уход"
     navigateTo('care');

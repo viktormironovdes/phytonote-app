@@ -31,6 +31,8 @@ function saveProfile() {
     const newName = nameInput.value.trim() || 'Вы';
     const newEmail = emailInput.value.trim();
     
+    console.log('💾 Saving profile:', { name: newName, email: newEmail });
+    
     // Сохраняем в state
     state.user.name = newName;
     state.user.email = newEmail;
@@ -52,25 +54,74 @@ function saveProfile() {
 }
 
 function loadProfile() {
-    document.getElementById('profileNameInput').value = state.user.name || 'Вы';
-    document.getElementById('profileEmailInput').value = state.user.email || '';
-    document.getElementById('notifPush').checked = state.user.notifications?.push ?? true;
-    document.getElementById('notifEmail').checked = state.user.notifications?.email ?? false;
+    console.log('📂 Loading profile...');
+    console.log('📊 state.user:', state.user);
+    
+    // Убеждаемся, что имя есть
+    if (!state.user.name || state.user.name.trim() === '') {
+        state.user.name = 'Вы';
+        saveState();
+    }
+    
+    const nameInput = document.getElementById('profileNameInput');
+    const emailInput = document.getElementById('profileEmailInput');
+    
+    if (nameInput) {
+        nameInput.value = state.user.name || 'Вы';
+        console.log('📝 Имя установлено:', nameInput.value);
+    } else {
+        console.error('❌ profileNameInput не найден!');
+    }
+    
+    if (emailInput) {
+        emailInput.value = state.user.email || '';
+        console.log('📝 Почта установлена:', emailInput.value);
+    } else {
+        console.error('❌ profileEmailInput не найден!');
+    }
+    
+    const notifPush = document.getElementById('notifPush');
+    const notifEmail = document.getElementById('notifEmail');
+    if (notifPush) notifPush.checked = state.user.notifications?.push ?? true;
+    if (notifEmail) notifEmail.checked = state.user.notifications?.email ?? false;
+    
+    // ВАЖНО: обновляем аватар после загрузки
+    console.log('🔄 Вызываем updateAvatarDisplay() из loadProfile()');
     updateAvatarDisplay();
 }
 
 function updateAvatarDisplay() {
     const letterEl = document.getElementById('avatarLetter');
     const imgEl = document.getElementById('avatarImage');
+    
+    console.log('🔄 updateAvatarDisplay() вызвана');
+    console.log('📊 state.user.name:', state.user.name);
+    console.log('📊 state.user.avatar:', state.user.avatar ? '✅ есть фото' : '❌ нет фото');
+    console.log('📊 letterEl:', letterEl ? '✅ найден' : '❌ НЕ НАЙДЕН');
+    console.log('📊 imgEl:', imgEl ? '✅ найден' : '❌ НЕ НАЙДЕН');
+    
+    // Проверяем, что элементы существуют
+    if (!letterEl || !imgEl) {
+        console.error('❌ Элементы аватарки не найдены в DOM!');
+        return;
+    }
+    
     if (state.user.avatar) {
+        // Если есть загруженная фотография - показываем её
         letterEl.style.display = 'none';
         imgEl.style.display = 'block';
         imgEl.src = state.user.avatar;
+        console.log('✅ Показываем фото аватара');
     } else {
+        // Если фото нет - показываем букву
         letterEl.style.display = 'block';
         imgEl.style.display = 'none';
+        
+        // Берём имя из state.user.name, если пусто - "Вы"
         const name = state.user.name || 'Вы';
-        letterEl.textContent = name.charAt(0).toUpperCase();
+        const firstLetter = name.charAt(0).toUpperCase();
+        letterEl.textContent = firstLetter;
+        console.log(`✅ Показываем букву: "${firstLetter}" (имя: "${name}")`);
     }
 }
 
@@ -91,6 +142,7 @@ function handleAvatarUpload(event) {
             state.user.avatar = dataUrl;
             saveState();
             updateAvatarDisplay();
+            alert('✅ Аватар обновлён!');
         };
         img.src = e.target.result;
     };

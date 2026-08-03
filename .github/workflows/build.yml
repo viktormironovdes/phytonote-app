@@ -93,10 +93,10 @@ jobs:
           -keypass phytonote123 \
           -dname "CN=PhytoNote, OU=App, O=PhytoNote, L=City, S=State, C=US"
         
-        # Копируем keystore в папку android (чтобы путь был проще)
-        cp phytonote.keystore android/
+        # Копируем keystore туда, где его ищет Gradle
+        cp phytonote.keystore android/app/
         
-        echo "✅ Keystore created and copied to android/"
+        echo "✅ Keystore created and copied to android/app/"
 
     - name: Configure signing
       run: |

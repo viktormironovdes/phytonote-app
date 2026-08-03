@@ -2,22 +2,132 @@
 // ПРОФИЛЬ И НАСТРОЙКИ
 // ================================================================
 
-// Импортируем Capacitor Filesystem (если доступен)
-let CapacitorFilesystem = null;
-try {
-    // Проверяем, запущено ли приложение в Capacitor
-    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-        // Динамический импорт для Capacitor
-        import('@capacitor/filesystem').then(module => {
-            CapacitorFilesystem = module.Filesystem;
-            console.log('✅ Capacitor Filesystem loaded');
-        }).catch(() => {
-            console.log('⚠️ Capacitor Filesystem not available, using fallback');
-        });
+// ================================================================
+// 1. ИНИЦИАЛИЗАЦИЯ ПЛАГИНОВ CAPACITOR
+// ================================================================
+
+let Share = null;
+let Filesystem = null;
+let isNative = false;
+
+// Проверяем наличие Capacitor
+if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+    isNative = true;
+    console.log('📱 Запущено на нативной платформе (Android)');
+    
+    // Получаем Share плагин
+    if (window.Capacitor.Plugins && window.Capacitor.Plugins.Share) {
+        Share = window.Capacitor.Plugins.Share;
+        console.log('✅ Capacitor Share загружен');
+    } else {
+        console.warn('⚠️ Capacitor Share не найден');
     }
-} catch (e) {
-    console.log('⚠️ Capacitor not available, using fallback');
+    
+    // Получаем Filesystem плагин
+    if (window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem) {
+        Filesystem = window.Capacitor.Plugins.Filesystem;
+        console.log('✅ Capacitor Filesystem загружен');
+    } else {
+        console.warn('⚠️ Capacitor Filesystem не найден');
+    }
+} else {
+    console.log('💻 Запущено в браузере (Web)');
 }
+
+// ================================================================
+// 2. РАБОТА С РАЗРЕШЕНИЯМИ
+// ================================================================
+
+/**
+ * Проверяет и запрашивает разрешение на запись файлов
+ * @returns {Promise<boolean>} true — разрешение есть, false — нет
+ */
+async function checkStoragePermission() {
+    if (!isNative) {
+        console.log('💻 В браузере разрешения не требуются');
+        return true;
+    }
+    
+    if (!Filesystem) {
+        console.warn('⚠️ Filesystem плагин не загружен');
+        return false;
+    }
+    
+    try {
+        console.log('📱 Запрашиваем разрешение на запись файлов...');
+        const result = await Filesystem.requestPermissions();
+        console.log('📱 Результат запроса разрешений:', result);
+        
+        // Проверяем, какое разрешение запрашивали
+        const permission = result.publicStorage || result.storage || result.permissions?.storage;
+        
+        if (permission === 'granted') {
+            console.log('✅ Разрешение получено');
+            return true;
+        } else {
+            console.log('❌ Разрешение не получено');
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Ошибка запроса разрешений:', error);
+        
+        // Для Android 13+ может быть другая структура ответа
+        try {
+            // Пробуем альтернативный способ проверки
+            const status = await Filesystem.checkPermissions();
+            console.log('📱 Статус разрешений:', status);
+            
+            const permission = status.publicStorage || status.storage || status.permissions?.storage;
+            return permission === 'granted';
+        } catch (e) {
+            console.error('❌ Ошибка проверки разрешений:', e);
+            return false;
+        }
+    }
+}
+
+/**
+ * Открывает экран настроек приложения
+ */
+async function openAppSettings() {
+    if (!isNative) {
+        alert('❌ Разрешение не получено.\n\nВ браузере сохранение файлов работает автоматически.');
+        return;
+    }
+    
+    try {
+        // Пробуем открыть настройки приложения через Capacitor
+        if (window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+            await window.Capacitor.Plugins.App.openSettings();
+            console.log('✅ Открыты настройки приложения');
+        } else {
+            // Если App плагин не доступен, показываем инструкцию
+            showPermissionInstruction();
+        }
+    } catch (error) {
+        console.error('❌ Ошибка открытия настроек:', error);
+        showPermissionInstruction();
+    }
+}
+
+/**
+ * Показывает инструкцию по включению разрешений
+ */
+function showPermissionInstruction() {
+    alert(
+        '❌ Нет разрешения на сохранение файлов.\n\n' +
+        'Чтобы включить разрешение:\n' +
+        '1. Настройки телефона\n' +
+        '2. Приложения → PhytoNote\n' +
+        '3. Разрешения\n' +
+        '4. Включить "Файлы и медиа"\n\n' +
+        'После этого попробуйте снова.'
+    );
+}
+
+// ================================================================
+// 3. ПРОФИЛЬ
+// ================================================================
 
 function saveProfile() {
     const nameInput = document.getElementById('profileNameInput');
@@ -33,60 +143,32 @@ function saveProfile() {
     
     console.log('💾 Saving profile:', { name: newName, email: newEmail });
     
-    // Сохраняем в state
     state.user.name = newName;
     state.user.email = newEmail;
     
-    // Сохраняем уведомления
     state.user.notifications = {
         push: document.getElementById('notifPush')?.checked ?? true,
         email: document.getElementById('notifEmail')?.checked ?? false,
     };
     
-    // Сохраняем в localStorage
     saveState();
-    
-    // Обновляем аватар (букву)
     updateAvatarDisplay();
-    
-    // Показываем уведомление
     alert('✅ Профиль сохранён!');
 }
 
 function loadProfile() {
     console.log('📂 Loading profile...');
-    console.log('📊 state.user:', state.user);
     
-    // Убеждаемся, что имя есть
     if (!state.user.name || state.user.name.trim() === '') {
         state.user.name = 'Вы';
         saveState();
     }
     
-    const nameInput = document.getElementById('profileNameInput');
-    const emailInput = document.getElementById('profileEmailInput');
+    document.getElementById('profileNameInput').value = state.user.name || 'Вы';
+    document.getElementById('profileEmailInput').value = state.user.email || '';
+    document.getElementById('notifPush').checked = state.user.notifications?.push ?? true;
+    document.getElementById('notifEmail').checked = state.user.notifications?.email ?? false;
     
-    if (nameInput) {
-        nameInput.value = state.user.name || 'Вы';
-        console.log('📝 Имя установлено:', nameInput.value);
-    } else {
-        console.error('❌ profileNameInput не найден!');
-    }
-    
-    if (emailInput) {
-        emailInput.value = state.user.email || '';
-        console.log('📝 Почта установлена:', emailInput.value);
-    } else {
-        console.error('❌ profileEmailInput не найден!');
-    }
-    
-    const notifPush = document.getElementById('notifPush');
-    const notifEmail = document.getElementById('notifEmail');
-    if (notifPush) notifPush.checked = state.user.notifications?.push ?? true;
-    if (notifEmail) notifEmail.checked = state.user.notifications?.email ?? false;
-    
-    // ВАЖНО: обновляем аватар после загрузки
-    console.log('🔄 Вызываем updateAvatarDisplay() из loadProfile()');
     updateAvatarDisplay();
 }
 
@@ -94,34 +176,20 @@ function updateAvatarDisplay() {
     const letterEl = document.getElementById('avatarLetter');
     const imgEl = document.getElementById('avatarImage');
     
-    console.log('🔄 updateAvatarDisplay() вызвана');
-    console.log('📊 state.user.name:', state.user.name);
-    console.log('📊 state.user.avatar:', state.user.avatar ? '✅ есть фото' : '❌ нет фото');
-    console.log('📊 letterEl:', letterEl ? '✅ найден' : '❌ НЕ НАЙДЕН');
-    console.log('📊 imgEl:', imgEl ? '✅ найден' : '❌ НЕ НАЙДЕН');
-    
-    // Проверяем, что элементы существуют
     if (!letterEl || !imgEl) {
-        console.error('❌ Элементы аватарки не найдены в DOM!');
+        console.error('❌ Элементы аватарки не найдены');
         return;
     }
     
     if (state.user.avatar) {
-        // Если есть загруженная фотография - показываем её
         letterEl.style.display = 'none';
         imgEl.style.display = 'block';
         imgEl.src = state.user.avatar;
-        console.log('✅ Показываем фото аватара');
     } else {
-        // Если фото нет - показываем букву
         letterEl.style.display = 'block';
         imgEl.style.display = 'none';
-        
-        // Берём имя из state.user.name, если пусто - "Вы"
         const name = state.user.name || 'Вы';
-        const firstLetter = name.charAt(0).toUpperCase();
-        letterEl.textContent = firstLetter;
-        console.log(`✅ Показываем букву: "${firstLetter}" (имя: "${name}")`);
+        letterEl.textContent = name.charAt(0).toUpperCase();
     }
 }
 
@@ -191,11 +259,14 @@ function saveDisplaySettings() {
 }
 
 // ================================================================
-// ЭКСПОРТ/ИМПОРТ КОЛЛЕКЦИЙ (С ПОДДЕРЖКОЙ ANDROID)
+// 4. ЭКСПОРТ КОЛЛЕКЦИЙ
 // ================================================================
 
 function showExportBaseModal() {
-    if (state.bases.length === 0) { alert('Нет коллекций для экспорта'); return; }
+    if (state.bases.length === 0) { 
+        alert('❌ Нет коллекций для экспорта'); 
+        return; 
+    }
     const select = document.getElementById('exportBaseSelect');
     select.innerHTML = state.bases.map(b => `<option value="${b.id}">${b.icon} ${getBaseDisplayName(b)}</option>`).join('');
     document.getElementById('exportBaseModal').classList.add('show');
@@ -204,6 +275,10 @@ function showExportBaseModal() {
 function closeExportBaseModal() {
     document.getElementById('exportBaseModal').classList.remove('show');
 }
+
+// ================================================================
+// 4A. ЭКСПОРТ — СОХРАНЕНИЕ НА УСТРОЙСТВО (FILESYSTEM)
+// ================================================================
 
 async function executeExportBase() {
     const baseId = document.getElementById('exportBaseSelect').value;
@@ -214,30 +289,76 @@ async function executeExportBase() {
     const jsonString = JSON.stringify(data, null, 2);
     const fileName = `collection_${base.name}_${new Date().toISOString().split('T')[0]}.json`;
 
-    try {
-        // Пробуем использовать Capacitor Filesystem (для Android)
-        if (CapacitorFilesystem && window.Capacitor && window.Capacitor.isNativePlatform()) {
-            console.log('📱 Using Capacitor Filesystem for Android export');
-            
-            // Запрашиваем разрешение на запись (Android 13+)
-            const result = await CapacitorFilesystem.requestPermissions();
-            if (result.permissions.storage !== 'granted') {
-                alert('❌ Нет разрешения на запись файлов. Дайте разрешение в настройках.');
-                return;
-            }
+    console.log('📤 Экспорт коллекции (сохранение):', { baseId, fileName, isNative });
 
-            // Сохраняем файл
-            await CapacitorFilesystem.writeFile({
-                path: fileName,
-                data: jsonString,
-                directory: 'DOWNLOAD',
-                encoding: 'utf8'
-            });
+    // Проверяем разрешение
+    const hasPermission = await checkStoragePermission();
+    if (!hasPermission) {
+        const goToSettings = confirm(
+            '❌ Нет разрешения на сохранение файлов.\n\n' +
+            'Хотите перейти в настройки, чтобы включить его?'
+        );
+        if (goToSettings) {
+            await openAppSettings();
+        }
+        return;
+    }
+
+    try {
+        if (isNative && Filesystem) {
+            console.log('📱 Сохраняем файл через Filesystem...');
             
-            alert(`✅ Коллекция экспортирована!\n📁 Папка: Загрузки (Downloads)\n📄 Файл: ${fileName}`);
+            // Пробуем сохранить в Downloads
+            try {
+                await Filesystem.writeFile({
+                    path: fileName,
+                    data: jsonString,
+                    directory: 'DOWNLOAD',
+                    encoding: 'utf8'
+                });
+                console.log('✅ Файл сохранён в Downloads');
+                alert(`✅ Коллекция сохранена!\n📁 Папка: Загрузки (Downloads)\n📄 Файл: ${fileName}`);
+                closeExportBaseModal();
+                return;
+            } catch (downloadError) {
+                console.warn('⚠️ Ошибка сохранения в Downloads:', downloadError);
+                
+                // Пробуем сохранить в Documents
+                try {
+                    await Filesystem.writeFile({
+                        path: fileName,
+                        data: jsonString,
+                        directory: 'DOCUMENTS',
+                        encoding: 'utf8'
+                    });
+                    console.log('✅ Файл сохранён в Documents');
+                    alert(`✅ Коллекция сохранена!\n📁 Папка: Документы (Documents)\n📄 Файл: ${fileName}`);
+                    closeExportBaseModal();
+                    return;
+                } catch (docError) {
+                    console.warn('⚠️ Ошибка сохранения в Documents:', docError);
+                    
+                    // Пробуем сохранить в Data (внутреннее хранилище)
+                    try {
+                        await Filesystem.writeFile({
+                            path: fileName,
+                            data: jsonString,
+                            directory: 'DATA',
+                            encoding: 'utf8'
+                        });
+                        console.log('✅ Файл сохранён в Data');
+                        alert(`✅ Коллекция сохранена!\n📁 Папка: Данные приложения\n📄 Файл: ${fileName}\n\n⚠️ Файл сохранён во внутреннем хранилище. Скопируйте его через проводник.`);
+                        closeExportBaseModal();
+                        return;
+                    } catch (dataError) {
+                        console.error('❌ Все попытки сохранения не удались:', dataError);
+                        alert(`❌ Не удалось сохранить файл.\n\nОшибка: ${dataError.message}\n\nПопробуйте использовать "Поделиться" для отправки файла.`);
+                    }
+                }
+            }
         } else {
-            // Fallback: браузерное скачивание (для ПК)
-            console.log('💻 Using browser download fallback');
+            // Web режим — браузерное скачивание
+            console.log('💻 Браузерное скачивание');
             const blob = new Blob([jsonString], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -247,13 +368,51 @@ async function executeExportBase() {
             a.click();
             document.body.removeChild(a);
             setTimeout(() => URL.revokeObjectURL(url), 1000);
-            alert(`✅ Коллекция экспортирована!\n📁 Папка: Загрузки (Downloads)\n📄 Файл: ${fileName}`);
+            alert(`✅ Коллекция скачана!\n📁 Папка: Загрузки (Downloads)\n📄 Файл: ${fileName}`);
+            closeExportBaseModal();
         }
     } catch (error) {
-        console.error('Export error:', error);
-        
-        // Если Capacitor не сработал, пробуем браузерный метод
-        try {
+        console.error('❌ Критическая ошибка экспорта:', error);
+        alert(`❌ Ошибка при сохранении: ${error.message}\n\nПопробуйте использовать "Поделиться" для отправки файла.`);
+    }
+}
+
+// ================================================================
+// 4B. ЭКСПОРТ — ПОДЕЛИТЬСЯ (SHARE)
+// ================================================================
+
+async function shareBase() {
+    const baseId = document.getElementById('exportBaseSelect').value;
+    const base = getBase(baseId);
+    if (!base) return;
+    const flowers = getFlowersByBase(baseId);
+    const data = { base, flowers, exportedAt: new Date().toISOString() };
+    const jsonString = JSON.stringify(data, null, 2);
+    const fileName = `collection_${base.name}_${new Date().toISOString().split('T')[0]}.json`;
+
+    console.log('📤 Экспорт коллекции (поделиться):', { baseId, fileName, isNative });
+
+    try {
+        if (isNative && Share) {
+            console.log('📱 Открываем окно "Поделиться"...');
+            
+            await Share.share({
+                title: `Коллекция: ${base.name}`,
+                text: `📋 Коллекция "${base.name}"\n🌱 Растений: ${flowers.length}\n📅 Экспортировано: ${new Date().toLocaleDateString('ru-RU')}\n\nДанные прилагаются в виде файла.`,
+                files: [{
+                    data: jsonString,
+                    mimeType: 'application/json',
+                    fileName: fileName
+                }]
+            });
+            
+            console.log('✅ Окно "Поделиться" открыто');
+            alert('✅ Открыто окно "Поделиться"! Выберите куда сохранить или отправить файл.');
+            closeExportBaseModal();
+            
+        } else {
+            // Web режим — браузерное скачивание
+            console.log('💻 Браузерное скачивание');
             const blob = new Blob([jsonString], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -263,14 +422,18 @@ async function executeExportBase() {
             a.click();
             document.body.removeChild(a);
             setTimeout(() => URL.revokeObjectURL(url), 1000);
-            alert(`✅ Коллекция экспортирована!\n📁 Папка: Загрузки (Downloads)\n📄 Файл: ${fileName}`);
-        } catch (fallbackError) {
-            alert(`❌ Ошибка при экспорте: ${error.message}`);
+            alert(`✅ Коллекция скачана!\n📁 Папка: Загрузки (Downloads)\n📄 Файл: ${fileName}`);
+            closeExportBaseModal();
         }
+    } catch (error) {
+        console.error('❌ Ошибка при открытии "Поделиться":', error);
+        alert(`❌ Ошибка: ${error.message}`);
     }
-    
-    closeExportBaseModal();
 }
+
+// ================================================================
+// 5. ИМПОРТ КОЛЛЕКЦИИ
+// ================================================================
 
 function importBase(event) {
     const file = event.target.files[0];
@@ -279,7 +442,10 @@ function importBase(event) {
     reader.onload = function(e) {
         try {
             const data = JSON.parse(e.target.result);
-            if (!data.base || !data.flowers) { alert('Неверный формат'); return; }
+            if (!data.base || !data.flowers) { 
+                alert('❌ Неверный формат файла'); 
+                return; 
+            }
             if (state.bases.some(b => b.name === data.base.name && b.owner === 'Вы')) {
                 if (!confirm(`Коллекция "${data.base.name}" уже существует. Создать копию?`)) return;
                 data.base.name = data.base.name + ' (копия)';
@@ -306,15 +472,17 @@ function importBase(event) {
             renderAll();
             renderCare();
             renderCalendar();
-            alert('✅ Коллекция импортирована');
-        } catch (err) { alert('Ошибка: ' + err.message); }
+            alert('✅ Коллекция импортирована!');
+        } catch (err) { 
+            alert('❌ Ошибка чтения файла: ' + err.message); 
+        }
     };
     reader.readAsText(file);
     event.target.value = '';
 }
 
 // ================================================================
-// ЭКСПОРТ/ИМПОРТ ВСЕХ ДАННЫХ
+// 6. ЭКСПОРТ ВСЕХ ДАННЫХ
 // ================================================================
 
 async function exportAllData() {
@@ -322,16 +490,46 @@ async function exportAllData() {
     const jsonString = JSON.stringify(data, null, 2);
     const fileName = `all_data_${new Date().toISOString().split('T')[0]}.json`;
 
+    console.log('📤 Экспорт всех данных:', { fileName, isNative });
+
+    // Проверяем разрешение
+    const hasPermission = await checkStoragePermission();
+    if (!hasPermission) {
+        const goToSettings = confirm(
+            '❌ Нет разрешения на сохранение файлов.\n\n' +
+            'Хотите перейти в настройки, чтобы включить его?'
+        );
+        if (goToSettings) {
+            await openAppSettings();
+        }
+        return;
+    }
+
     try {
-        if (CapacitorFilesystem && window.Capacitor && window.Capacitor.isNativePlatform()) {
-            await CapacitorFilesystem.requestPermissions();
-            await CapacitorFilesystem.writeFile({
-                path: fileName,
-                data: jsonString,
-                directory: 'DOWNLOAD',
-                encoding: 'utf8'
-            });
-            alert(`✅ Все данные экспортированы!\n📁 Папка: Загрузки (Downloads)\n📄 Файл: ${fileName}`);
+        if (isNative && Filesystem) {
+            try {
+                await Filesystem.writeFile({
+                    path: fileName,
+                    data: jsonString,
+                    directory: 'DOWNLOAD',
+                    encoding: 'utf8'
+                });
+                alert(`✅ Все данные сохранены!\n📁 Папка: Загрузки (Downloads)\n📄 Файл: ${fileName}`);
+                return;
+            } catch (e) {
+                try {
+                    await Filesystem.writeFile({
+                        path: fileName,
+                        data: jsonString,
+                        directory: 'DOCUMENTS',
+                        encoding: 'utf8'
+                    });
+                    alert(`✅ Все данные сохранены!\n📁 Папка: Документы (Documents)\n📄 Файл: ${fileName}`);
+                    return;
+                } catch (e2) {
+                    alert(`❌ Ошибка: ${e2.message}`);
+                }
+            }
         } else {
             const blob = new Blob([jsonString], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
@@ -342,12 +540,56 @@ async function exportAllData() {
             a.click();
             document.body.removeChild(a);
             setTimeout(() => URL.revokeObjectURL(url), 1000);
-            alert(`✅ Все данные экспортированы!\n📁 Папка: Загрузки (Downloads)\n📄 Файл: ${fileName}`);
+            alert(`✅ Все данные скачаны!\n📁 Папка: Загрузки (Downloads)\n📄 Файл: ${fileName}`);
         }
     } catch (error) {
-        alert(`❌ Ошибка при экспорте: ${error.message}`);
+        alert(`❌ Ошибка: ${error.message}`);
     }
 }
+
+// ================================================================
+// 7. SHARE ВСЕХ ДАННЫХ
+// ================================================================
+
+async function shareAllData() {
+    const data = { bases: state.bases, flowers: state.flowers, user: state.user };
+    const jsonString = JSON.stringify(data, null, 2);
+    const fileName = `all_data_${new Date().toISOString().split('T')[0]}.json`;
+
+    console.log('📤 Поделиться всеми данными:', { fileName, isNative });
+
+    try {
+        if (isNative && Share) {
+            await Share.share({
+                title: 'Все данные PhytoNote',
+                text: `📋 Полный экспорт данных PhytoNote\n📁 Коллекций: ${state.bases.length}\n🌱 Растений: ${state.flowers.length}\n📅 Экспортировано: ${new Date().toLocaleDateString('ru-RU')}\n\nДанные прилагаются в виде файла.`,
+                files: [{
+                    data: jsonString,
+                    mimeType: 'application/json',
+                    fileName: fileName
+                }]
+            });
+            alert('✅ Открыто окно "Поделиться"! Выберите куда сохранить или отправить файл.');
+        } else {
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            alert(`✅ Все данные скачаны!\n📁 Папка: Загрузки (Downloads)\n📄 Файл: ${fileName}`);
+        }
+    } catch (error) {
+        alert(`❌ Ошибка: ${error.message}`);
+    }
+}
+
+// ================================================================
+// 8. ИМПОРТ ВСЕХ ДАННЫХ
+// ================================================================
 
 function importAllData(event) {
     const file = event.target.files[0];
@@ -394,6 +636,10 @@ function importAllData(event) {
     event.target.value = '';
 }
 
+// ================================================================
+// 9. ЛОГИ
+// ================================================================
+
 function getLogs() {
     try {
         const raw = localStorage.getItem('appLogs');
@@ -404,22 +650,37 @@ function getLogs() {
 async function exportLogs() {
     const logs = getLogs();
     if (logs.length === 0) {
-        alert('Логи пусты');
+        alert('📋 Логи пусты');
         return;
     }
     const jsonString = JSON.stringify(logs, null, 2);
     const fileName = `phytonote_logs_${new Date().toISOString().split('T')[0]}.json`;
 
     try {
-        if (CapacitorFilesystem && window.Capacitor && window.Capacitor.isNativePlatform()) {
-            await CapacitorFilesystem.requestPermissions();
-            await CapacitorFilesystem.writeFile({
-                path: fileName,
-                data: jsonString,
-                directory: 'DOWNLOAD',
-                encoding: 'utf8'
-            });
-            alert(`✅ Логи экспортированы!\n📁 Папка: Загрузки (Downloads)\n📄 Файл: ${fileName}`);
+        if (isNative && Filesystem) {
+            try {
+                await Filesystem.writeFile({
+                    path: fileName,
+                    data: jsonString,
+                    directory: 'DOWNLOAD',
+                    encoding: 'utf8'
+                });
+                alert(`✅ Логи сохранены!\n📁 Папка: Загрузки (Downloads)\n📄 Файл: ${fileName}`);
+                return;
+            } catch (e) {
+                try {
+                    await Filesystem.writeFile({
+                        path: fileName,
+                        data: jsonString,
+                        directory: 'DOCUMENTS',
+                        encoding: 'utf8'
+                    });
+                    alert(`✅ Логи сохранены!\n📁 Папка: Документы (Documents)\n📄 Файл: ${fileName}`);
+                    return;
+                } catch (e2) {
+                    alert(`❌ Ошибка: ${e2.message}`);
+                }
+            }
         } else {
             const blob = new Blob([jsonString], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
@@ -430,9 +691,9 @@ async function exportLogs() {
             a.click();
             document.body.removeChild(a);
             setTimeout(() => URL.revokeObjectURL(url), 1000);
-            alert(`✅ Логи экспортированы!\n📁 Папка: Загрузки (Downloads)\n📄 Файл: ${fileName}`);
+            alert(`✅ Логи скачаны!\n📁 Папка: Загрузки (Downloads)\n📄 Файл: ${fileName}`);
         }
     } catch (error) {
-        alert(`❌ Ошибка при экспорте: ${error.message}`);
+        alert(`❌ Ошибка: ${error.message}`);
     }
 }

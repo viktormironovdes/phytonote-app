@@ -87,33 +87,65 @@ jobs:
           echo "✅ Icons installed!"
         fi
 
-    - name: Fix AndroidManifest for launcher icon
+    - name: Replace AndroidManifest.xml with correct one
       run: |
-        MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
-        if [ -f "$MANIFEST_PATH" ]; then
-          sed -i 's/<application/<application android:icon="@mipmap\/ic_launcher" android:roundIcon="@mipmap\/ic_launcher_round"/' "$MANIFEST_PATH"
-          echo "✅ AndroidManifest updated"
-        fi
+        cat > android/app/src/main/AndroidManifest.xml << 'EOF'
+        <?xml version="1.0" encoding="utf-8"?>
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+            xmlns:tools="http://schemas.android.com/tools"
+            package="com.phytonote.app">
 
-    - name: Add storage permissions to AndroidManifest
-      run: |
-        MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
-        if [ -f "$MANIFEST_PATH" ]; then
-          # Добавляем разрешения на запись и чтение
-          sed -i '/<uses-permission android:name="android.permission.INTERNET" \/>/a \    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" \/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" \/>\n    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" \/>' "$MANIFEST_PATH"
-          
-          # Добавляем атрибут requestLegacyExternalStorage для Android 10
-          sed -i 's/<application/<application android:requestLegacyExternalStorage="true"/' "$MANIFEST_PATH"
-          
-          echo "✅ AndroidManifest updated with storage permissions"
-        fi
+            <uses-permission android:name="android.permission.INTERNET" />
+            <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+            <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+            <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+
+            <application
+                android:allowBackup="true"
+                android:icon="@mipmap/ic_launcher"
+                android:label="@string/app_name"
+                android:roundIcon="@mipmap/ic_launcher_round"
+                android:supportsRtl="true"
+                android:theme="@style/AppTheme"
+                android:requestLegacyExternalStorage="true"
+                tools:ignore="GoogleAppIndexingWarning">
+
+                <activity
+                    android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
+                    android:name="com.phytonote.app.MainActivity"
+                    android:label="@string/title_activity_main"
+                    android:theme="@style/AppTheme.NoActionBarLaunch"
+                    android:launchMode="singleTask"
+                    android:exported="true">
+
+                    <intent-filter>
+                        <action android:name="android.intent.action.MAIN" />
+                        <category android:name="android.intent.category.LAUNCHER" />
+                    </intent-filter>
+
+                </activity>
+
+                <provider
+                    android:name="androidx.core.content.FileProvider"
+                    android:authorities="${applicationId}.fileprovider"
+                    android:exported="false"
+                    android:grantUriPermissions="true">
+                    <meta-data
+                        android:name="android.support.FILE_PROVIDER_PATHS"
+                        android:resource="@xml/file_paths" />
+                </provider>
+            </application>
+
+        </manifest>
+        EOF
+        echo "✅ AndroidManifest.xml replaced"
 
     - name: Create file_paths.xml for file sharing
       run: |
         mkdir -p android/app/src/main/res/xml
         cat > android/app/src/main/res/xml/file_paths.xml << 'EOF'
         <?xml version="1.0" encoding="utf-8"?>
-        <paths>
+        <paths xmlns:android="http://schemas.android.com/apk/res/android">
             <external-path
                 name="external"
                 path="." />

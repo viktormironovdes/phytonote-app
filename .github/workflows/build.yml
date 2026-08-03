@@ -60,12 +60,10 @@ jobs:
         echo "📂 Looking for icons in: $ICON_PATH"
         ls -la $ICON_PATH || echo "⚠️ Icon folder not found"
         
-        # Android иконки (создаём папки если нужно)
         for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
           mkdir -p android/app/src/main/res/mipmap-$density
         done
 
-        # Копируем иконки
         [ -f "$ICON_PATH/icon-48.png" ] && cp "$ICON_PATH/icon-48.png" android/app/src/main/res/mipmap-mdpi/ic_launcher.png
         [ -f "$ICON_PATH/icon-72.png" ] && cp "$ICON_PATH/icon-72.png" android/app/src/main/res/mipmap-hdpi/ic_launcher.png
         [ -f "$ICON_PATH/icon-96.png" ] && cp "$ICON_PATH/icon-96.png" android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
@@ -78,10 +76,7 @@ jobs:
       run: |
         MANIFEST="android/app/src/main/AndroidManifest.xml"
         
-        # Добавляем разрешения
         sed -i '/<uses-permission android:name="android.permission.INTERNET" \/>/a \    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" \/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" \/>' "$MANIFEST"
-        
-        # Добавляем requestLegacyExternalStorage
         sed -i 's/<application/<application android:requestLegacyExternalStorage="true"/' "$MANIFEST"
         
         echo "✅ Permissions added"
@@ -97,6 +92,11 @@ jobs:
           -storepass phytonote123 \
           -keypass phytonote123 \
           -dname "CN=PhytoNote, OU=App, O=PhytoNote, L=City, S=State, C=US"
+        
+        # Копируем keystore в папку android (чтобы путь был проще)
+        cp phytonote.keystore android/
+        
+        echo "✅ Keystore created and copied to android/"
 
     - name: Configure signing
       run: |
@@ -104,7 +104,7 @@ jobs:
         echo 'android {
             signingConfigs {
                 release {
-                    storeFile file("../../../phytonote.keystore")
+                    storeFile file("phytonote.keystore")
                     storePassword "phytonote123"
                     keyAlias "phytonote"
                     keyPassword "phytonote123"
@@ -116,6 +116,8 @@ jobs:
                 }
             }
         }' >> app/build.gradle
+        
+        echo "✅ Signing configured"
 
     - name: Build APK
       run: |

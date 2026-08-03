@@ -32,6 +32,7 @@ jobs:
             "build": "echo \"Building PhytoNote...\""
           },
           "dependencies": {
+            "@capacitor/share": "^6.0.0",
             "@capacitor/filesystem": "^6.0.0"
           },
           "devDependencies": {
@@ -43,7 +44,7 @@ jobs:
     - name: Install dependencies
       run: npm install
 
-    - name: Copy web assets BEFORE Capacitor init
+    - name: Copy web assets
       run: |
         mkdir -p www
         cp -r assets/* www/
@@ -86,50 +87,156 @@ jobs:
           echo "✅ Icons installed!"
         fi
 
-    - name: Build debug APK
+    - name: Fix AndroidManifest for launcher icon
+      run: |
+        MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
+        if [ -f "$MANIFEST_PATH" ]; then
+          sed -i 's/<application/<application android:icon="@mipmap\/ic_launcher" android:roundIcon="@mipmap\/ic_launcher_round"/' "$MANIFEST_PATH"
+          echo "✅ AndroidManifest updated"
+        fi
+
+    - name: Add storage permissions to AndroidManifest
+      run: |
+        MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
+        if [ -f "$MANIFEST_PATH" ]; then
+          # Добавляем разрешения на запись и чтение
+          sed -i '/<uses-permission android:name="android.permission.INTERNET" \/>/a \    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" \/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" \/>\n    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" \/>' "$MANIFEST_PATH"
+          
+          # Добавляем атрибут requestLegacyExternalStorage для Android 10
+          sed -i 's/<application/<application android:requestLegacyExternalStorage="true"/' "$MANIFEST_PATH"
+          
+          echo "✅ AndroidManifest updated with storage permissions"
+        fi
+
+    - name: Create file_paths.xml for file sharing
+      run: |
+        mkdir -p android/app/src/main/res/xml
+        cat > android/app/src/main/res/xml/file_paths.xml << 'EOF'
+        <?xml version="1.0" encoding="utf-8"?>
+        <paths>
+            <external-path
+                name="external"
+                path="." />
+            <external-files-path
+                name="external_files"
+                path="." />
+            <cache-path
+                name="cache"
+                path="." />
+            <external-cache-path
+                name="external_cache"
+                path="." />
+            <files-path
+                name="files"
+                path="." />
+        </paths>
+        EOF
+        echo "✅ file_paths.xml created"
+
+    - name: Replace build.gradle with correct configuration
+      run: |
+        cat > android/app/build.gradle << 'EOF'
+        apply plugin: 'com.android.application'
+
+        android {
+            compileSdkVersion 34
+            namespace "com.phytonote.app"
+            
+            defaultConfig {
+                applicationId "com.phytonote.app"
+                minSdkVersion 23
+                targetSdkVersion 34
+                versionCode 2
+                versionName "1.0.0"
+                testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+            }
+            
+            signingConfigs {
+                release {
+                    storeFile file("../../../phytonote.keystore")
+                    storePassword "phytonote123"
+                    keyAlias "phytonote"
+                    keyPassword "phytonote123"
+                }
+            }
+            
+            buildTypes {
+                release {
+                    signingConfig signingConfigs.release
+                    minifyEnabled false
+                    proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+                }
+            }
+        }
+
+        repositories {
+            flatDir {
+                dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+            }
+        }
+
+        dependencies {
+            implementation fileTree(include: ['*.jar'], dir: 'libs')
+            implementation "androidx.appcompat:appcompat:1.6.1"
+            implementation "com.google.android.material:material:1.9.0"
+            implementation "androidx.constraintlayout:constraintlayout:2.1.4"
+            implementation project(':capacitor-android')
+            implementation project(':capacitor-cordova-android-plugins')
+        }
+
+        apply from: 'capacitor.build.gradle'
+        EOF
+        
+        echo "✅ build.gradle replaced with correct configuration"
+
+    - name: Restore keystore from secrets
+      run: |
+        if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+          echo "🔐 Restoring keystore from secrets..."
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > phytonote.keystore
+          echo "✅ Keystore restored"
+        else
+          echo "⚠️ No keystore in secrets, creating new one..."
+          keytool -genkey -v \
+            -keystore phytonote.keystore \
+            -alias phytonote \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass phytonote123 \
+            -keypass phytonote123 \
+            -dname "CN=PhytoNote, OU=App, O=PhytoNote, L=City, S=State, C=US"
+        fi
+
+    - name: Update versionCode
+      run: |
+        GRADLE_PATH="android/app/build.gradle"
+        if [ -f "$GRADLE_PATH" ]; then
+          CURRENT_VERSION=$(grep -o 'versionCode [0-9]*' "$GRADLE_PATH" | awk '{print $2}')
+          if [ -z "$CURRENT_VERSION" ]; then
+            CURRENT_VERSION=1
+          fi
+          NEW_VERSION=$((CURRENT_VERSION + 1))
+          sed -i "s/versionCode [0-9]*/versionCode $NEW_VERSION/" "$GRADLE_PATH"
+          echo "✅ Version updated: versionCode=$NEW_VERSION"
+        fi
+
+    - name: Build Release APK
       run: |
         cd android
         chmod +x ./gradlew
-        ./gradlew assembleDebug
-
-    - name: Create keystore
-      run: |
-        keytool -genkey -v \
-          -keystore phytonote.keystore \
-          -alias phytonote \
-          -keyalg RSA \
-          -keysize 2048 \
-          -validity 10000 \
-          -storepass phytonote123 \
-          -keypass phytonote123 \
-          -dname "CN=PhytoNote, OU=App, O=PhytoNote, L=City, S=State, C=US"
-
-    - name: Install apksigner
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y apksigner
-
-    - name: Sign the APK
-      run: |
-        apksigner sign \
-          --ks phytonote.keystore \
-          --ks-pass pass:phytonote123 \
-          --key-pass pass:phytonote123 \
-          android/app/build/outputs/apk/debug/app-debug.apk
-        
-        mkdir -p android/app/build/outputs/apk/release/
-        cp android/app/build/outputs/apk/debug/app-debug.apk android/app/build/outputs/apk/release/app-release.apk
-        
-        echo "✅ APK signed successfully!"
-
-    - name: Verify APK signature
-      run: |
-        apksigner verify android/app/build/outputs/apk/release/app-release.apk
-        echo "✅ APK signature verified!"
+        ./gradlew assembleRelease
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: phytonote-apk
         path: android/app/build/outputs/apk/release/app-release.apk
+        retention-days: 7
+
+    - name: Upload keystore backup
+      uses: actions/upload-artifact@v4
+      with:
+        name: phytonote-keystore-backup
+        path: phytonote.keystore
         retention-days: 7

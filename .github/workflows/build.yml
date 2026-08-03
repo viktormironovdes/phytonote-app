@@ -55,24 +55,36 @@ jobs:
 
     - name: Copy icons
       run: |
-        mkdir -p android/app/src/main/res/mipmap-mdpi
-        mkdir -p android/app/src/main/res/mipmap-hdpi
-        mkdir -p android/app/src/main/res/mipmap-xhdpi
-        mkdir -p android/app/src/main/res/mipmap-xxhdpi
-        mkdir -p android/app/src/main/res/mipmap-xxxhdpi
-
         ICON_PATH="assets/phytonote/icons"
+        
+        echo "📂 Looking for icons in: $ICON_PATH"
+        ls -la $ICON_PATH || echo "⚠️ Icon folder not found"
+        
+        # Android иконки (создаём папки если нужно)
+        for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+          mkdir -p android/app/src/main/res/mipmap-$density
+        done
 
+        # Копируем иконки
         [ -f "$ICON_PATH/icon-48.png" ] && cp "$ICON_PATH/icon-48.png" android/app/src/main/res/mipmap-mdpi/ic_launcher.png
         [ -f "$ICON_PATH/icon-72.png" ] && cp "$ICON_PATH/icon-72.png" android/app/src/main/res/mipmap-hdpi/ic_launcher.png
         [ -f "$ICON_PATH/icon-96.png" ] && cp "$ICON_PATH/icon-96.png" android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
         [ -f "$ICON_PATH/icon-144.png" ] && cp "$ICON_PATH/icon-144.png" android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
         [ -f "$ICON_PATH/icon-192.png" ] && cp "$ICON_PATH/icon-192.png" android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
 
+        echo "✅ Icons copied"
+
     - name: Add storage permissions
       run: |
-        sed -i 's/<application/<application android:requestLegacyExternalStorage="true"/' android/app/src/main/AndroidManifest.xml
-        sed -i '/<uses-permission android:name="android.permission.INTERNET" \/>/a \    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" \/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" \/>' android/app/src/main/AndroidManifest.xml
+        MANIFEST="android/app/src/main/AndroidManifest.xml"
+        
+        # Добавляем разрешения
+        sed -i '/<uses-permission android:name="android.permission.INTERNET" \/>/a \    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" \/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" \/>' "$MANIFEST"
+        
+        # Добавляем requestLegacyExternalStorage
+        sed -i 's/<application/<application android:requestLegacyExternalStorage="true"/' "$MANIFEST"
+        
+        echo "✅ Permissions added"
 
     - name: Create keystore
       run: |
@@ -86,7 +98,7 @@ jobs:
           -keypass phytonote123 \
           -dname "CN=PhytoNote, OU=App, O=PhytoNote, L=City, S=State, C=US"
 
-    - name: Sign and build
+    - name: Configure signing
       run: |
         cd android
         echo 'android {
@@ -105,6 +117,9 @@ jobs:
             }
         }' >> app/build.gradle
 
+    - name: Build APK
+      run: |
+        cd android
         chmod +x ./gradlew
         ./gradlew assembleRelease
 

@@ -1,0 +1,9 @@
+{
+  "appId": "com.phytonote.app",
+  "appName": "PhytoNote",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "android": {
+    "icon": "assets/phytonote/icons/icon-192.png"
+  }
+}

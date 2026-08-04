@@ -25,15 +25,17 @@ function renderCalendar() {
         const dateObj = new Date(year, month, d);
         const dateStr = getLocalDateStr(dateObj);
 
-        let hasDone = false;
-        let hasPlanned = false;
-        let hasNote = false;
+        // Проверяем события на этот день
+        let hasDone = false;          // Выполнено (зелёный)
+        let hasPlanned = false;       // Запланировано (оранжевый)
+        let hasNote = false;          // Есть заметка
 
         state.flowers.forEach(f => {
             if (!isBaseEditable(f.base_id)) return;
 
             const historyEvents = (f.history || []).filter(h => h.date === dateStr);
             
+            // Проверяем выполненные события (полив, подкормка, пересадка)
             historyEvents.forEach(h => {
                 if (h.type === 'watering' || h.type === 'fertilizing' || h.type === 'repotting') {
                     hasDone = true;
@@ -43,13 +45,16 @@ function renderCalendar() {
                 }
             });
 
+            // Проверяем запланированные события (только для будущих дат)
             if (dateStr >= todayStr) {
+                // Полив
                 const nextWateringDate = getNextWateringDate(f);
                 if (getLocalDateStr(nextWateringDate) === dateStr) {
                     const hasDoneToday = (f.history || []).some(h => h.date === dateStr && h.type === 'watering');
                     if (!hasDoneToday) hasPlanned = true;
                 }
                 
+                // Подкормка
                 if (f.fertilizing > 0 && isFertilizingActive(f)) {
                     const nextFertDate = getNextFertilizingDate(f);
                     if (nextFertDate && getLocalDateStr(nextFertDate) === dateStr) {
@@ -58,6 +63,7 @@ function renderCalendar() {
                     }
                 }
                 
+                // Пересадка
                 if (f.repot_interval > 0) {
                     const nextRepotDate = getNextRepottingDate(f);
                     if (nextRepotDate && getLocalDateStr(nextRepotDate) === dateStr) {
@@ -68,13 +74,15 @@ function renderCalendar() {
             }
         });
 
+        // Определяем цвет точки
         let dotColor = '';
         if (hasDone) {
-            dotColor = 'green';
+            dotColor = 'green';  // ✅ Выполнено
         } else if (hasPlanned) {
-            dotColor = 'orange';
+            dotColor = 'orange'; // 🟠 Запланировано
         }
 
+        // Символ заметки в правом верхнем углу
         const noteIcon = hasNote ? '💬' : '';
 
         const isToday = dateStr === todayStr;
@@ -123,6 +131,7 @@ function showDayEvents(dateStr) {
         const todayStr = getLocalDateStr(now);
         
         if (dateStr >= todayStr) {
+            // Полив
             const nextWateringDate = getNextWateringDate(f);
             if (getLocalDateStr(nextWateringDate) === dateStr) {
                 const hasDone = (f.history || []).some(h => h.date === dateStr && h.type === 'watering');
@@ -131,6 +140,7 @@ function showDayEvents(dateStr) {
                 }
             }
             
+            // Подкормка
             if (f.fertilizing > 0 && isFertilizingActive(f)) {
                 const nextFertDate = getNextFertilizingDate(f);
                 if (nextFertDate && getLocalDateStr(nextFertDate) === dateStr) {
@@ -141,6 +151,7 @@ function showDayEvents(dateStr) {
                 }
             }
             
+            // Пересадка
             if (f.repot_interval > 0) {
                 const nextRepotDate = getNextRepottingDate(f);
                 if (nextRepotDate && getLocalDateStr(nextRepotDate) === dateStr) {
@@ -153,6 +164,7 @@ function showDayEvents(dateStr) {
         }
     });
 
+    // Сначала выполненные, потом запланированные
     events.sort((a, b) => {
         if (a.planned === b.planned) return 0;
         return a.planned ? 1 : -1;

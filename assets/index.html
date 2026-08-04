@@ -164,7 +164,7 @@
             
             <div style="margin-bottom:8px;border-top:1px solid #eef3ee;padding-top:8px;">
                 <div style="font-size:13px;font-weight:500;color:#2d4a2d;margin-bottom:4px;">🌱 Коллекции</div>
-                <button class="btn btn-outline" onclick="showExportBaseModal()" style="margin-top:2px;">📤 Экспорт коллекции</button>
+                <button class="btn btn-outline" onclick="showExportBaseModal()" style="margin-top:2px;">📤 Экспортировать коллекцию</button>
                 <button class="btn btn-outline" onclick="document.getElementById('importBaseInput').click()" style="margin-top:2px;">📥 Импортировать коллекцию</button>
                 <input type="file" id="importBaseInput" accept=".json" style="display:none" onchange="importBase(event)">
             </div>
@@ -429,13 +429,10 @@
             <div class="modal-scroll">
                 <label>Выберите коллекцию для экспорта</label>
                 <select id="exportBaseSelect"></select>
-                <div style="padding: 0 20px; margin-top: 12px;">
-                    <button class="btn btn-save" onclick="executeExportBase()" style="width:100%;">📤 Сохранить на устройство</button>
-                    <button class="btn btn-outline" onclick="shareBase()" style="width:100%; margin-top: 8px;">📤 Поделиться</button>
-                </div>
             </div>
             <div class="modal-actions">
                 <button class="btn-cancel" onclick="closeExportBaseModal()">Отмена</button>
+                <button class="btn-save" onclick="executeExportBase()">Экспортировать</button>
             </div>
         </div>
     </div>

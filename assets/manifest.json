@@ -1,7 +1,7 @@
 {
   "name": "PhytoNote",
   "short_name": "PhytoNote",
-  "description": "Приложение для ухода за растениями",
+  "description": "Приложение - помошник для ухода за растениями",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f4f7f4",
